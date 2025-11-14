@@ -1,0 +1,25 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+async-trait = "0.1"
+axum = "0.8.6"
+chrono = "0.4"
+http = "1.2"
+jacquard = "0.9.0"
+jacquard-axum = "0.9.0"
+jacquard-common = "0.9.0"
+jacquard-oauth = "0.9.0"
+lexicons = { path = "../lexicons" }
+miette = { version = "7.6.0", features = ["fancy"] }
+reqwest = { version = "0.12.24", features = ["json"] }
+rocketman = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_html_form = "0.2"
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+tokio = { version = "1.48.0", features = ["full"] }
+url = "2.5"

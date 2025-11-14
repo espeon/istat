@@ -1,0 +1,3 @@
+[workspace]
+members = ["server", "lexicons", "jacquard-oauth-proxy"]
+resolver = "2"

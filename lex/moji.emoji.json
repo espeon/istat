@@ -1,0 +1,27 @@
+{
+  "lexicon": 1,
+  "id": "vg.nat.istat.moji.emoji",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["emoji"],
+        "properties": {
+          "emoji": {
+            "type": "blob",
+            "accept": ["image/*"],
+            "maxSize": 1000000
+          },
+          "altText": {
+            "type": "string",
+            "maxLength": 5120,
+            "maxGraphemes": 512,
+            "description": "Optional alt text description for the emoji"
+          }
+        }
+      }
+    }
+  }
+}
