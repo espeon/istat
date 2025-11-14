@@ -92,6 +92,94 @@ impl TokenManager {
         .await
     }
 
+    /// Validate a downstream JWT and extract claims
+    pub async fn validate_downstream_jwt(
+        &self,
+        jwt: &str,
+        key_store: &impl KeyStore,
+    ) -> Result<DownstreamTokenClaims> {
+        use base64::Engine;
+        use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+        use p256::ecdsa::signature::Verifier;
+
+        // Parse JWT (header.payload.signature)
+        let parts: Vec<&str> = jwt.split('.').collect();
+        if parts.len() != 3 {
+            return Err(crate::error::Error::InvalidRequest(
+                "invalid JWT format".to_string(),
+            ));
+        }
+
+        // Decode header to verify it's the right algorithm
+        let header_json = URL_SAFE_NO_PAD.decode(parts[0]).map_err(|e| {
+            crate::error::Error::InvalidRequest(format!("invalid header encoding: {}", e))
+        })?;
+
+        let header: serde_json::Value = serde_json::from_slice(&header_json).map_err(|e| {
+            crate::error::Error::InvalidRequest(format!("invalid header JSON: {}", e))
+        })?;
+
+        // Verify algorithm
+        let alg = header.get("alg").and_then(|v| v.as_str()).ok_or_else(|| {
+            crate::error::Error::InvalidRequest("missing alg in header".to_string())
+        })?;
+
+        if alg != "ES256" {
+            return Err(crate::error::Error::InvalidRequest(format!(
+                "unsupported algorithm: {}",
+                alg
+            )));
+        }
+
+        // Decode payload
+        let payload_json = URL_SAFE_NO_PAD.decode(parts[1]).map_err(|e| {
+            crate::error::Error::InvalidRequest(format!("invalid payload encoding: {}", e))
+        })?;
+
+        // Decode signature
+        let signature_bytes = URL_SAFE_NO_PAD.decode(parts[2]).map_err(|e| {
+            crate::error::Error::InvalidRequest(format!("invalid signature encoding: {}", e))
+        })?;
+
+        // Get signing key for validation
+        let signing_key = key_store.get_signing_key().await?;
+        let verifying_key = signing_key.verifying_key();
+
+        // Verify signature
+        let signature_input = format!("{}.{}", parts[0], parts[1]);
+        let signature = p256::ecdsa::Signature::from_bytes(signature_bytes.as_slice().into())
+            .map_err(|e| {
+                crate::error::Error::InvalidRequest(format!("invalid signature format: {}", e))
+            })?;
+
+        verifying_key
+            .verify(signature_input.as_bytes(), &signature)
+            .map_err(|_| {
+                crate::error::Error::InvalidRequest("signature verification failed".to_string())
+            })?;
+
+        // Parse claims
+        let claims: DownstreamTokenClaims = serde_json::from_slice(&payload_json)
+            .map_err(|e| crate::error::Error::InvalidRequest(format!("invalid claims: {}", e)))?;
+
+        // Verify issuer
+        if claims.iss != self.issuer {
+            return Err(crate::error::Error::InvalidRequest(
+                "wrong issuer".to_string(),
+            ));
+        }
+
+        // Check expiry
+        let now = Utc::now().timestamp();
+        if claims.exp < now {
+            return Err(crate::error::Error::InvalidRequest(
+                "token expired".to_string(),
+            ));
+        }
+
+        Ok(claims)
+    }
+
     /// Refresh upstream tokens if they're about to expire
     pub async fn refresh_upstream_if_needed<S, K, N>(
         &self,
@@ -202,6 +290,24 @@ struct TokenResponse {
     access_token: String,
     refresh_token: Option<String>,
     expires_in: Option<i64>,
+}
+
+/// Claims from a downstream JWT issued by the proxy
+#[derive(Debug, serde::Deserialize)]
+pub struct DownstreamTokenClaims {
+    pub iss: String,
+    pub sub: String, // account DID
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub scope: String,
+    pub cnf: ConfirmationClaim,
+}
+
+/// DPoP confirmation claim
+#[derive(Debug, serde::Deserialize)]
+pub struct ConfirmationClaim {
+    pub jkt: String, // DPoP JKT
 }
 
 fn generate_jti() -> String {

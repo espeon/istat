@@ -296,7 +296,7 @@ where
 /// Handle token request (exchange code for tokens or refresh tokens).
 async fn handle_token<S, K, N>(
     State(server): State<OAuthProxyServer<S, K, N>>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     body: String,
 ) -> Result<Response>
 where
@@ -315,6 +315,9 @@ where
             let code = params
                 .code
                 .ok_or_else(|| Error::InvalidRequest("missing code".to_string()))?;
+
+            // Extract client's DPoP JKT
+            let dpop_jkt = extract_dpop_jkt(&headers)?;
 
             // Look up and consume the pending auth
             let pending_auth = server
@@ -340,14 +343,6 @@ where
             .map_err(|e| Error::InvalidRequest(format!("failed to get session: {}", e)))?
             .ok_or_else(|| Error::SessionNotFound)?;
 
-            // Extract token info from upstream session
-            let access_token = upstream_session_data.token_set.access_token.to_string();
-            let refresh_token = upstream_session_data
-                .token_set
-                .refresh_token
-                .as_ref()
-                .map(|t| t.to_string());
-
             let scope_str = upstream_session_data
                 .token_set
                 .scope
@@ -363,39 +358,41 @@ where
                         .join(" ")
                 });
 
-            // Calculate expiry
-            let expires_in = upstream_session_data
-                .token_set
-                .expires_at
-                .map(|exp| {
-                    let now = chrono::Utc::now();
-                    let exp_chrono: &chrono::DateTime<chrono::FixedOffset> = exp.as_ref();
-                    let exp_utc = exp_chrono.with_timezone(&chrono::Utc);
-                    (exp_utc - now).num_seconds().max(0) as u64
-                })
-                .unwrap_or(3600);
+            // Issue downstream JWT bound to client's DPoP key
+            let access_token = server
+                .token_manager
+                .issue_downstream_jwt(
+                    &pending_auth.account_did,
+                    &dpop_jkt,
+                    &scope_str,
+                    3600, // 1 hour expiry
+                    &*server.key_store,
+                )
+                .await?;
 
-            // Store refresh token mapping if we have a refresh token
-            if let Some(ref rt) = refresh_token {
-                server
-                    .session_store
-                    .store_refresh_token_mapping(
-                        rt,
-                        pending_auth.account_did.clone(),
-                        pending_auth.upstream_session_id.clone(),
-                    )
-                    .await?;
-                tracing::info!(
-                    "stored refresh token mapping for DID: {}",
-                    pending_auth.account_did
-                );
-            }
+            // Generate downstream refresh token (separate from upstream)
+            let downstream_refresh_token = generate_random_string(64);
+
+            // Store mapping: downstream_refresh_token → (account_did, upstream_session_id)
+            server
+                .session_store
+                .store_refresh_token_mapping(
+                    &downstream_refresh_token,
+                    pending_auth.account_did.clone(),
+                    pending_auth.upstream_session_id.clone(),
+                )
+                .await?;
+
+            tracing::info!(
+                "issued downstream JWT and refresh token for DID: {}",
+                pending_auth.account_did
+            );
 
             let response = TokenResponse {
                 access_token,
                 token_type: "DPoP".to_string(),
-                expires_in,
-                refresh_token,
+                expires_in: 3600,
+                refresh_token: Some(downstream_refresh_token),
                 scope: scope_str,
             };
 
@@ -405,6 +402,9 @@ where
             let refresh_token = params
                 .refresh_token
                 .ok_or_else(|| Error::InvalidRequest("missing refresh_token".to_string()))?;
+
+            // Extract client's DPoP JKT (may have changed)
+            let dpop_jkt = extract_dpop_jkt(&headers)?;
 
             tracing::info!("handling refresh token request");
 
@@ -427,14 +427,6 @@ where
                     .ok_or_else(|| Error::SessionNotFound)?;
 
             // jacquard-oauth handles token refresh automatically when the session is accessed
-            // Just extract the current tokens from the session
-            let access_token = upstream_session_data.token_set.access_token.to_string();
-            let new_refresh_token = upstream_session_data
-                .token_set
-                .refresh_token
-                .as_ref()
-                .map(|t| t.to_string());
-
             let scope_str = upstream_session_data
                 .token_set
                 .scope
@@ -450,38 +442,41 @@ where
                         .join(" ")
                 });
 
-            // Calculate expiry
-            let expires_in = upstream_session_data
-                .token_set
-                .expires_at
-                .map(|exp| {
-                    let now = chrono::Utc::now();
-                    let exp_chrono: &chrono::DateTime<chrono::FixedOffset> = exp.as_ref();
-                    let exp_utc = exp_chrono.with_timezone(&chrono::Utc);
-                    (exp_utc - now).num_seconds().max(0) as u64
-                })
-                .unwrap_or(3600);
+            // Issue new downstream JWT
+            let access_token = server
+                .token_manager
+                .issue_downstream_jwt(
+                    &account_did,
+                    &dpop_jkt,
+                    &scope_str,
+                    3600,
+                    &*server.key_store,
+                )
+                .await?;
 
-            // Update refresh token mapping if we got a new refresh token
-            if let Some(ref new_rt) = new_refresh_token {
-                if new_rt != &refresh_token {
-                    server
-                        .session_store
-                        .store_refresh_token_mapping(
-                            new_rt,
-                            account_did.clone(),
-                            session_id.clone(),
-                        )
-                        .await?;
-                    tracing::info!("updated refresh token mapping for DID: {}", account_did);
-                }
-            }
+            // Generate new downstream refresh token (token rotation)
+            let new_downstream_refresh = generate_random_string(64);
+
+            // Update mapping
+            server
+                .session_store
+                .store_refresh_token_mapping(
+                    &new_downstream_refresh,
+                    account_did.clone(),
+                    session_id.clone(),
+                )
+                .await?;
+
+            tracing::info!(
+                "issued new downstream JWT and refresh token for DID: {}",
+                account_did
+            );
 
             let response = TokenResponse {
                 access_token,
                 token_type: "DPoP".to_string(),
-                expires_in,
-                refresh_token: new_refresh_token,
+                expires_in: 3600,
+                refresh_token: Some(new_downstream_refresh),
                 scope: scope_str,
             };
 
