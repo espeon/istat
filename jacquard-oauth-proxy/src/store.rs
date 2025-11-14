@@ -116,6 +116,32 @@ pub trait OAuthSessionStore: Send + Sync {
         &self,
         refresh_token: &str,
     ) -> Result<Option<(String, String)>>;
+
+    /// Store active session mapping (DID → session_id)
+    async fn store_active_session(&self, did: &str, session_id: String) -> Result<()>;
+
+    /// Get active session for a DID
+    async fn get_active_session(&self, did: &str) -> Result<Option<String>>;
+
+    /// Store DPoP key for a session
+    async fn store_session_dpop_key(
+        &self,
+        session_id: &str,
+        dpop_jkt: String,
+        key: jose_jwk::Key,
+    ) -> Result<()>;
+
+    /// Get DPoP key for a session
+    async fn get_session_dpop_key(
+        &self,
+        session_id: &str,
+    ) -> Result<Option<(String, jose_jwk::Key)>>;
+
+    /// Store DPoP nonce for a session
+    async fn update_session_dpop_nonce(&self, session_id: &str, nonce: String) -> Result<()>;
+
+    /// Get DPoP nonce for a session
+    async fn get_session_dpop_nonce(&self, session_id: &str) -> Result<Option<String>>;
 }
 
 /// Key management for OAuth tokens and DPoP proofs
@@ -126,10 +152,10 @@ pub trait KeyStore: Send + Sync {
     async fn get_signing_key(&self) -> Result<p256::ecdsa::SigningKey>;
 
     /// Create a new DPoP key for upstream PDS communication
-    async fn create_dpop_key(&self) -> Result<jose_jwk::Key>;
+    async fn create_dpop_key(&self) -> Result<jose_jwk::Jwk>;
 
     /// Get a DPoP key by its thumbprint
-    async fn get_dpop_key(&self, thumbprint: &str) -> Result<Option<jose_jwk::Key>>;
+    async fn get_dpop_key(&self, thumbprint: &str) -> Result<Option<jose_jwk::Jwk>>;
 }
 
 /// Nonce management for DPoP replay protection

@@ -262,7 +262,7 @@ impl TokenManager {
 
     fn create_dpop_proof(
         &self,
-        _key: &jose_jwk::Key,
+        _key: &jose_jwk::Jwk,
         method: Method,
         url: &Url,
         nonce: Option<&str>,
@@ -282,6 +282,84 @@ impl TokenManager {
         // TODO: Implement DPoP proof signing
         // For now, return a placeholder
         Ok(format!("dpop_proof_{}", claims["jti"]))
+    }
+
+    /// Create a DPoP proof for an upstream PDS request
+    pub async fn create_upstream_dpop_proof(
+        &self,
+        method: &str,
+        url: &str,
+        access_token: Option<&str>,
+        nonce: Option<&str>,
+        dpop_jwk: &jose_jwk::Jwk,
+    ) -> Result<String> {
+        use base64::Engine;
+        use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+        use jacquard_oauth::jose::{
+            create_signed_jwt,
+            jws::RegisteredHeader,
+            jwt::{Claims, PublicClaims, RegisteredClaims},
+        };
+        use jose_jwk::jose_jwa::{Algorithm, Signing};
+        use sha2::{Digest, Sha256};
+
+        let now = Utc::now().timestamp();
+        let jti = generate_random_string(32);
+
+        // Hash access token if provided (for token-bound requests)
+        let ath = if let Some(token) = access_token {
+            let mut hasher = Sha256::new();
+            hasher.update(token.as_bytes());
+            let hash = hasher.finalize();
+            Some(URL_SAFE_NO_PAD.encode(&hash).into())
+        } else {
+            None
+        };
+
+        // Create DPoP JWT claims
+        let registered = RegisteredClaims {
+            iss: None,
+            sub: None,
+            aud: None,
+            exp: None,
+            nbf: None,
+            iat: Some(now),
+            jti: Some(jti.into()),
+        };
+
+        let public = PublicClaims {
+            htm: Some(method.into()),
+            htu: Some(url.into()),
+            ath,
+            nonce: nonce.map(|n| n.into()),
+        };
+
+        let claims = Claims { registered, public };
+
+        // Create header with JWK included
+        let mut header = RegisteredHeader::from(Algorithm::Signing(Signing::Es256));
+        header.typ = Some("dpop+jwt".into());
+        header.jwk = Some(dpop_jwk.clone());
+
+        // Extract the secret key from the JWK for signing
+        let signing_key = match jose_jwk::crypto::Key::try_from(&dpop_jwk.key)
+            .map_err(|e| crate::error::Error::InvalidRequest(format!("invalid key: {:?}", e)))?
+        {
+            jose_jwk::crypto::Key::P256(jose_jwk::crypto::Kind::Secret(secret)) => secret,
+            _ => {
+                return Err(crate::error::Error::InvalidRequest(
+                    "DPoP key must be P256 secret key".to_string(),
+                ));
+            }
+        };
+
+        // Use jacquard-oauth's create_signed_jwt
+        let dpop_proof =
+            create_signed_jwt(signing_key.into(), header.into(), claims).map_err(|e| {
+                crate::error::Error::InvalidRequest(format!("failed to sign DPoP proof: {}", e))
+            })?;
+
+        Ok(dpop_proof.to_string())
     }
 }
 
@@ -315,4 +393,16 @@ fn generate_jti() -> String {
     let mut rng = rand::thread_rng();
     let bytes: [u8; 16] = rng.r#gen();
     hex::encode(bytes)
+}
+
+fn generate_random_string(len: usize) -> String {
+    use rand::Rng;
+    const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let mut rng = rand::thread_rng();
+    (0..len)
+        .map(|_| {
+            let idx = rng.gen_range(0..CHARSET.len());
+            CHARSET[idx] as char
+        })
+        .collect()
 }

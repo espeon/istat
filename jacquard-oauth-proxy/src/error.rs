@@ -15,6 +15,7 @@ pub enum Error {
     InvalidClient,
     UnauthorizedClient,
     UnsupportedGrantType,
+    Unauthorized,
     DpopProofRequired,
 
     // DPoP errors
@@ -49,6 +50,7 @@ impl fmt::Display for Error {
             Error::InvalidClient => write!(f, "invalid_client"),
             Error::UnauthorizedClient => write!(f, "unauthorized_client"),
             Error::UnsupportedGrantType => write!(f, "unsupported_grant_type"),
+            Error::Unauthorized => write!(f, "unauthorized"),
             Error::DpopProofRequired => write!(f, "DPoP proof required"),
             Error::DpopMethodMismatch => write!(f, "DPoP htm mismatch"),
             Error::DpopUrlMismatch => write!(f, "DPoP htu mismatch"),
@@ -78,7 +80,9 @@ impl axum::response::IntoResponse for Error {
         use axum::http::StatusCode;
 
         let status = match self {
-            Error::SessionNotFound | Error::SessionExpired => StatusCode::UNAUTHORIZED,
+            Error::SessionNotFound | Error::SessionExpired | Error::Unauthorized => {
+                StatusCode::UNAUTHORIZED
+            }
             Error::InvalidGrant | Error::InvalidClient => StatusCode::BAD_REQUEST,
             Error::DpopProofRequired => StatusCode::UNAUTHORIZED,
             Error::InvalidRequest(_) => StatusCode::BAD_REQUEST,
