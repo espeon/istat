@@ -28,3 +28,11 @@ tokio = { version = "1.48", features = ["full"] }
 tracing = "0.1"
 url = { version = "2.5", features = ["serde"] }
 urlencoding = "2.1"
+
+[[example]]
+name = "simple_server"
+path = "examples/simple_server.rs"
+
+[dev-dependencies]
+miette = { version = "7.6.0", features = ["fancy"] }
+tracing-subscriber = "0.3"
