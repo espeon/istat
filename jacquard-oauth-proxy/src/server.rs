@@ -518,61 +518,107 @@ where
 async fn handle_xrpc_proxy<S, K, N>(
     State(server): State<OAuthProxyServer<S, K, N>>,
     method: Method,
+    uri: http::Uri,
     headers: HeaderMap,
     body: String,
 ) -> Result<Response>
 where
-    S: OAuthSessionStore + ClientAuthStore + Clone,
-    K: KeyStore + Clone,
-    N: NonceStore + Clone,
+    S: OAuthSessionStore + ClientAuthStore + Clone + 'static,
+    K: KeyStore + Clone + 'static,
+    N: NonceStore + Clone + 'static,
 {
-    tracing::info!(
-        "proxying XRPC request: {} {}",
-        method,
-        headers
-            .get("uri")
-            .map(|v| v.to_str().unwrap_or(""))
-            .unwrap_or("")
-    );
+    tracing::info!("proxying XRPC request: {} {}", method, uri.path());
 
-    // Extract DPoP JKT and look up session
+    // 1. Extract and validate downstream JWT from Authorization header
+    let auth_header = headers
+        .get("Authorization")
+        .and_then(|v| v.to_str().ok())
+        .ok_or(Error::Unauthorized)?;
+
+    let token = auth_header
+        .strip_prefix("DPoP ")
+        .or_else(|| auth_header.strip_prefix("Bearer "))
+        .ok_or(Error::Unauthorized)?;
+
+    let claims = server
+        .token_manager
+        .validate_downstream_jwt(token, &*server.key_store)
+        .await?;
+
+    tracing::info!("validated JWT for DID: {}", claims.sub);
+
+    // 2. Verify DPoP binding
     let dpop_jkt = extract_dpop_jkt(&headers)?;
-    let mut session = server
+    if dpop_jkt != claims.cnf.jkt {
+        return Err(Error::InvalidRequest("DPoP key mismatch".to_string()));
+    }
+
+    // 3. Look up active session for this user
+    let session_id = server
         .session_store
-        .get_by_dpop_jkt(&dpop_jkt)
+        .get_active_session(&claims.sub)
         .await?
         .ok_or(Error::SessionNotFound)?;
 
-    // Check if upstream token needs refresh
-    server
+    let did = jacquard_common::types::did::Did::new_owned(&claims.sub)
+        .map_err(|e| Error::InvalidRequest(format!("invalid DID: {}", e)))?;
+
+    let upstream_session_data =
+        ClientAuthStore::get_session(&*server.session_store, &did, &session_id)
+            .await
+            .map_err(|e| Error::InvalidRequest(format!("failed to get session: {}", e)))?
+            .ok_or(Error::SessionNotFound)?;
+
+    tracing::info!("found upstream session for DID: {}", claims.sub);
+
+    // 4. Build upstream URL
+    let upstream_url = format!(
+        "{}{}",
+        upstream_session_data.host_url,
+        uri.path_and_query().map(|pq| pq.as_str()).unwrap_or("")
+    );
+
+    // 5. Get upstream DPoP key
+    let upstream_dpop_key = server
+        .session_store
+        .get_session_dpop_key(&session_id)
+        .await?
+        .map(|(_jkt, key)| key)
+        .ok_or_else(|| Error::InvalidRequest("DPoP key not found for session".to_string()))?;
+
+    tracing::info!("retrieved DPoP key for upstream request");
+
+    // 6. Get stored DPoP nonce (if any)
+    let dpop_nonce = server
+        .session_store
+        .get_session_dpop_nonce(&session_id)
+        .await?;
+
+    // 7. Create DPoP proof for upstream request
+    let dpop_proof = server
         .token_manager
-        .refresh_upstream_if_needed(
-            &mut session,
-            &*server.session_store,
-            &*server.key_store,
-            &*server.nonce_store,
+        .create_upstream_dpop_proof(
+            method.as_str(),
+            &upstream_url,
+            Some(upstream_session_data.token_set.access_token.as_ref()),
+            dpop_nonce.as_deref(),
+            &upstream_dpop_key,
         )
         .await?;
 
-    // Build the upstream request
-    let uri = headers
-        .get("uri")
-        .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| Error::InvalidRequest("missing uri".to_string()))?;
+    tracing::info!("created DPoP proof for upstream request");
 
-    let upstream_url = format!("{}{}", session.pds_url, uri);
-
-    // TODO: Create proper DPoP proof for upstream request
-    // For now, forward without DPoP
-
-    // Forward the request
+    // 8. Forward request to PDS
     let client = reqwest::Client::new();
-    let mut request = client.request(method.clone(), &upstream_url).header(
-        "Authorization",
-        format!("DPoP {}", session.upstream_access_token),
-    );
+    let mut request = client
+        .request(method.clone(), &upstream_url)
+        .header(
+            "Authorization",
+            format!("DPoP {}", upstream_session_data.token_set.access_token),
+        )
+        .header("DPoP", dpop_proof);
 
-    // Copy relevant headers
+    // Copy relevant headers (skip auth/dpop/host)
     for (name, value) in headers.iter() {
         if !["host", "authorization", "dpop"].contains(&name.as_str()) {
             request = request.header(name, value);
@@ -583,21 +629,34 @@ where
         request = request.body(body);
     }
 
+    // 9. Send request
     let response = request
         .send()
         .await
         .map_err(|e| Error::NetworkError(e.to_string()))?;
 
-    // Build response
+    // 10. Handle DPoP nonce updates
+    if let Some(new_nonce) = response.headers().get("DPoP-Nonce") {
+        if let Ok(nonce_str) = new_nonce.to_str() {
+            // Store new nonce for next request
+            let _ = server
+                .session_store
+                .update_session_dpop_nonce(&session_id, nonce_str.to_string())
+                .await;
+            tracing::info!("updated DPoP nonce from response");
+        }
+    }
+
+    // 11. Return response
     let status = response.status();
-    let headers = response.headers().clone();
+    let resp_headers = response.headers().clone();
     let body = response
         .text()
         .await
         .map_err(|e| Error::NetworkError(e.to_string()))?;
 
     let mut response_builder = axum::http::Response::builder().status(status);
-    for (name, value) in headers.iter() {
+    for (name, value) in resp_headers.iter() {
         response_builder = response_builder.header(name, value);
     }
 

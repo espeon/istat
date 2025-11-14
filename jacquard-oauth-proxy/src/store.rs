@@ -128,14 +128,14 @@ pub trait OAuthSessionStore: Send + Sync {
         &self,
         session_id: &str,
         dpop_jkt: String,
-        key: jose_jwk::Key,
+        key: jose_jwk::Jwk,
     ) -> Result<()>;
 
     /// Get DPoP key for a session
     async fn get_session_dpop_key(
         &self,
         session_id: &str,
-    ) -> Result<Option<(String, jose_jwk::Key)>>;
+    ) -> Result<Option<(String, jose_jwk::Jwk)>>;
 
     /// Store DPoP nonce for a session
     async fn update_session_dpop_nonce(&self, session_id: &str, nonce: String) -> Result<()>;
