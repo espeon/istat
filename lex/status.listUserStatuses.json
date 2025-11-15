@@ -1,0 +1,84 @@
+{
+  "lexicon": 1,
+  "id": "vg.nat.istat.status.listUserStatuses",
+  "defs": {
+    "main": {
+      "type": "query",
+      "description": "Get status history for a specific user",
+      "parameters": {
+        "type": "params",
+        "required": ["handle"],
+        "properties": {
+          "handle": {
+            "type": "string",
+            "format": "handle",
+            "description": "The handle of the user whose status history to retrieve"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 50,
+            "description": "Maximum number of statuses to return"
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor"
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["statuses"],
+          "properties": {
+            "statuses": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["rkey", "emojiUrl", "createdAt"],
+                "properties": {
+                  "rkey": {
+                    "type": "string",
+                    "description": "The record key"
+                  },
+                  "emojiUrl": {
+                    "type": "string",
+                    "description": "URL to the emoji"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Optional status text title",
+                    "maxLength": 2560,
+                    "maxGraphemes": 256
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Optional status text description",
+                    "maxLength": 20480,
+                    "maxGraphemes": 2048
+                  },
+                  "expires": {
+                    "type": "string",
+                    "format": "datetime",
+                    "description": "Optional expiration timestamp"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "datetime",
+                    "description": "When this status was created"
+                  }
+                }
+              }
+            },
+            "cursor": {
+              "type": "string",
+              "description": "Pagination cursor for next page"
+            }
+          }
+        }
+      }
+    }
+  }
+}

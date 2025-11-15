@@ -1,5 +1,5 @@
 [package]
-name = "jacquard-oauth-proxy"
+name = "jacquard-oatproxy"
 version = "0.1.0"
 edition = "2024"
 
@@ -8,11 +8,12 @@ anyhow = "1.0"
 async-trait = "0.1"
 axum = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
+dpop-verifier = "4.4"
 hex = "0.4"
 http = "1.2"
-jacquard-common = "0.9"
-jacquard-identity = "0.9"
-jacquard-oauth = "0.9"
+jacquard-common = { git = "https://tangled.org/@nonbinary.computer/jacquard"}
+jacquard-identity = { git = "https://tangled.org/@nonbinary.computer/jacquard"}
+jacquard-oauth = { git = "https://tangled.org/@nonbinary.computer/jacquard"}
 jose-jwk = "0.1"
 jose-jws = "0.1"
 p256 = { version = "0.13", features = ["ecdsa"] }
@@ -31,8 +32,10 @@ urlencoding = "2.1"
 
 [[example]]
 name = "simple_server"
-path = "examples/simple_server.rs"
+path = "examples/simple_server/main.rs"
 
 [dev-dependencies]
+bincode = "1.3"
 miette = { version = "7.6.0", features = ["fancy"] }
-tracing-subscriber = "0.3"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tower-http = { version = "0.6", features = ["cors"] }

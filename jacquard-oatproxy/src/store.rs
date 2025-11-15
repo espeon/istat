@@ -50,6 +50,10 @@ pub struct PARData {
     pub code_challenge: Option<String>,
     /// PKCE code challenge method
     pub code_challenge_method: Option<String>,
+    /// Login hint (user handle or DID)
+    pub login_hint: Option<String>,
+    /// Downstream client's DPoP JKT
+    pub downstream_dpop_jkt: String,
     /// When this PAR expires (typically 90 seconds)
     pub expires_at: DateTime<Utc>,
 }
@@ -165,8 +169,18 @@ pub trait NonceStore: Send + Sync {
     /// Returns true if the nonce was valid and hasn't been used
     async fn check_and_consume_nonce(&self, jti: &str) -> Result<bool>;
 
-    /// Generate a new nonce value
-    async fn generate_nonce(&self) -> Result<String>;
+    /// Generate a new nonce value for response (nonce XOR nonce_pad)
+    async fn generate_nonce(&self, session_id: &str, nonce_pad: &str) -> Result<String>;
+
+    /// Store nonce pad for a session (used to generate and verify nonces)
+    async fn store_nonce_pad(&self, session_id: &str, nonce_pad: &str) -> Result<()>;
+
+    /// Get nonce pad for a session
+    async fn get_nonce_pad(&self, session_id: &str) -> Result<Option<String>>;
+
+    /// Verify that a nonce matches the expected format for this session
+    /// (checks that nonce XOR nonce_pad produces valid result)
+    async fn verify_nonce(&self, session_id: &str, nonce: &str) -> Result<bool>;
 
     /// Clean up expired nonces
     async fn cleanup_expired(&self, before: DateTime<Utc>) -> Result<()>;

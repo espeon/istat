@@ -17,6 +17,7 @@ pub enum Error {
     UnsupportedGrantType,
     Unauthorized,
     DpopProofRequired,
+    DpopNonceRequired(String), // Contains the nonce to send back
 
     // DPoP errors
     DpopMethodMismatch,
@@ -52,6 +53,7 @@ impl fmt::Display for Error {
             Error::UnsupportedGrantType => write!(f, "unsupported_grant_type"),
             Error::Unauthorized => write!(f, "unauthorized"),
             Error::DpopProofRequired => write!(f, "DPoP proof required"),
+            Error::DpopNonceRequired(_) => write!(f, "use_dpop_nonce"),
             Error::DpopMethodMismatch => write!(f, "DPoP htm mismatch"),
             Error::DpopUrlMismatch => write!(f, "DPoP htu mismatch"),
             Error::DpopNonceReused => write!(f, "DPoP nonce reused"),
@@ -77,6 +79,7 @@ impl From<anyhow::Error> for Error {
 // axum IntoResponse implementation
 impl axum::response::IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
+        use axum::Json;
         use axum::http::StatusCode;
 
         let status = match self {
@@ -85,6 +88,23 @@ impl axum::response::IntoResponse for Error {
             }
             Error::InvalidGrant | Error::InvalidClient => StatusCode::BAD_REQUEST,
             Error::DpopProofRequired => StatusCode::UNAUTHORIZED,
+            Error::DpopNonceRequired(ref nonce) => {
+                // Return OAuth error format with DPoP-Nonce header
+                let error_body = serde_json::json!({
+                    "error": "use_dpop_nonce",
+                    "error_description": "Authorization server requires nonce in DPoP proof"
+                });
+
+                return (
+                    StatusCode::BAD_REQUEST,
+                    [(
+                        axum::http::header::HeaderName::from_static("dpop-nonce"),
+                        nonce.clone(),
+                    )],
+                    Json(error_body),
+                )
+                    .into_response();
+            }
             Error::InvalidRequest(_) => StatusCode::BAD_REQUEST,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };

@@ -336,10 +336,27 @@ impl TokenManager {
 
         let claims = Claims { registered, public };
 
-        // Create header with JWK included
+        // Create header with JWK included (public key only)
         let mut header = RegisteredHeader::from(Algorithm::Signing(Signing::Es256));
         header.typ = Some("dpop+jwt".into());
-        header.jwk = Some(dpop_jwk.clone());
+
+        // Create a public-only version of the JWK for the header
+        let public_jwk = jose_jwk::Jwk {
+            key: match &dpop_jwk.key {
+                jose_jwk::Key::Ec(ec) => {
+                    // Keep only public parameters (crv, x, y), strip private key (d)
+                    jose_jwk::Key::Ec(jose_jwk::Ec {
+                        crv: ec.crv.clone(),
+                        x: ec.x.clone(),
+                        y: ec.y.clone(),
+                        d: None, // Remove private key
+                    })
+                }
+                _ => dpop_jwk.key.clone(),
+            },
+            prm: dpop_jwk.prm.clone(),
+        };
+        header.jwk = Some(public_jwk);
 
         // Extract the secret key from the JWK for signing
         let signing_key = match jose_jwk::crypto::Key::try_from(&dpop_jwk.key)

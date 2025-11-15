@@ -1,4 +1,4 @@
-//! # jacquard-oauth-proxy
+//! # jacquard-oatproxy
 //!
 //! A transparent ATProto OAuth proxy that handles authentication server-side.
 //!
@@ -17,17 +17,18 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use jacquard_oauth_proxy::prelude::*;
+//! use jacquard_oatproxy::{OAuthProxyServer, ProxyConfig};
 //!
 //! # async fn example() -> anyhow::Result<()> {
-//! let proxy = OAuthProxyServer::builder("https://myproxy.example.com")
+//! let config = ProxyConfig::new("https://myproxy.example.com".parse()?);
+//! let proxy = OAuthProxyServer::builder()
+//!     .config(config)
 //!     .session_store(my_session_store)
 //!     .key_store(my_key_store)
 //!     .nonce_store(my_nonce_store)
 //!     .build()?;
 //!
-//! let app = axum::Router::new()
-//!     .merge(proxy.into_router());
+//! let app = proxy.router();
 //! # Ok(())
 //! # }
 //! ```
@@ -39,10 +40,8 @@ pub mod session;
 pub mod store;
 pub mod token;
 
-pub mod prelude {
-    pub use crate::config::ProxyConfig;
-    pub use crate::error::{Error, Result};
-    pub use crate::server::{OAuthProxyServer, OAuthProxyServerBuilder};
-    pub use crate::session::{OAuthSession, SessionState};
-    pub use crate::store::{KeyStore, NonceStore, OAuthSessionStore};
-}
+pub use config::ProxyConfig;
+pub use error::{Error, Result};
+pub use server::{OAuthProxyServer, OAuthProxyServerBuilder};
+pub use session::{OAuthSession, SessionState};
+pub use store::{KeyStore, NonceStore, OAuthSessionStore};

@@ -1,0 +1,66 @@
+{
+  "lexicon": 1,
+  "id": "vg.nat.istat.status.getStatus",
+  "defs": {
+    "main": {
+      "type": "query",
+      "description": "Get a status record by handle and rkey",
+      "parameters": {
+        "type": "params",
+        "required": ["handle", "rkey"],
+        "properties": {
+          "handle": {
+            "type": "string",
+            "format": "handle",
+            "description": "The handle of the user whose status to retrieve"
+          },
+          "rkey": {
+            "type": "string",
+            "description": "The record key (tid) of the status"
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["emojiUrl", "createdAt"],
+          "properties": {
+            "emojiUrl": {
+              "type": "string",
+              "description": "a URL to the emoji"
+            },
+            "title": {
+              "type": "string",
+              "description": "Optional status text title",
+              "maxLength": 2560,
+              "maxGraphemes": 256
+            },
+            "description": {
+              "type": "string",
+              "description": "Optional status text description",
+              "maxLength": 20480,
+              "maxGraphemes": 2048
+            },
+            "expires": {
+              "type": "string",
+              "format": "datetime",
+              "description": "Optional expiration timestamp for this status"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "datetime",
+              "description": "When this status was created"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "name": "StatusNotFound",
+          "description": "The requested status does not exist"
+        }
+      ]
+    }
+  }
+}
