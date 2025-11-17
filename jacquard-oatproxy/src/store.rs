@@ -61,23 +61,11 @@ pub struct PARData {
 /// Storage abstraction for OAuth sessions
 #[async_trait]
 pub trait OAuthSessionStore: Send + Sync {
-    /// Create a new session
-    async fn create_session(&self, session: OAuthSession) -> Result<SessionId>;
-
-    /// Get a session by its ID
-    async fn get_session(&self, id: &SessionId) -> Result<Option<OAuthSession>>;
-
     /// Update an existing session
     async fn update_session(&self, session: &OAuthSession) -> Result<()>;
 
     /// Delete a session
     async fn delete_session(&self, id: &SessionId) -> Result<()>;
-
-    /// Get a session by PAR request URI
-    async fn get_by_request_uri(&self, uri: &str) -> Result<Option<OAuthSession>>;
-
-    /// Get a session by OAuth state parameter
-    async fn get_by_state(&self, state: &str) -> Result<Option<OAuthSession>>;
 
     /// Get a session by downstream DPoP key thumbprint (PRIMARY LOOKUP)
     async fn get_by_dpop_jkt(&self, jkt: &str) -> Result<Option<OAuthSession>>;
@@ -146,6 +134,10 @@ pub trait OAuthSessionStore: Send + Sync {
 
     /// Get DPoP nonce for a session
     async fn get_session_dpop_nonce(&self, session_id: &str) -> Result<Option<String>>;
+
+    /// Check if a nonce (JTI) is valid and consume it
+    /// Returns true if the nonce was valid and hasn't been used
+    async fn check_and_consume_nonce(&self, jti: &str) -> Result<bool>;
 }
 
 /// Key management for OAuth tokens and DPoP proofs
@@ -155,33 +147,6 @@ pub trait KeyStore: Send + Sync {
     /// Returns a P256 ECDSA signing key
     async fn get_signing_key(&self) -> Result<p256::ecdsa::SigningKey>;
 
-    /// Create a new DPoP key for upstream PDS communication
-    async fn create_dpop_key(&self) -> Result<jose_jwk::Jwk>;
-
     /// Get a DPoP key by its thumbprint
     async fn get_dpop_key(&self, thumbprint: &str) -> Result<Option<jose_jwk::Jwk>>;
-}
-
-/// Nonce management for DPoP replay protection
-#[async_trait]
-pub trait NonceStore: Send + Sync {
-    /// Check if a nonce (JTI) is valid and consume it
-    /// Returns true if the nonce was valid and hasn't been used
-    async fn check_and_consume_nonce(&self, jti: &str) -> Result<bool>;
-
-    /// Generate a new nonce value for response (nonce XOR nonce_pad)
-    async fn generate_nonce(&self, session_id: &str, nonce_pad: &str) -> Result<String>;
-
-    /// Store nonce pad for a session (used to generate and verify nonces)
-    async fn store_nonce_pad(&self, session_id: &str, nonce_pad: &str) -> Result<()>;
-
-    /// Get nonce pad for a session
-    async fn get_nonce_pad(&self, session_id: &str) -> Result<Option<String>>;
-
-    /// Verify that a nonce matches the expected format for this session
-    /// (checks that nonce XOR nonce_pad produces valid result)
-    async fn verify_nonce(&self, session_id: &str, nonce: &str) -> Result<bool>;
-
-    /// Clean up expired nonces
-    async fn cleanup_expired(&self, before: DateTime<Utc>) -> Result<()>;
 }

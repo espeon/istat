@@ -1,6 +1,6 @@
 use crate::error::Result;
 use crate::session::OAuthSession;
-use crate::store::{KeyStore, NonceStore, OAuthSessionStore};
+use crate::store::{KeyStore, OAuthSessionStore};
 use chrono::{Duration, Utc};
 use http::Method;
 use serde_json::json;
@@ -181,17 +181,15 @@ impl TokenManager {
     }
 
     /// Refresh upstream tokens if they're about to expire
-    pub async fn refresh_upstream_if_needed<S, K, N>(
+    pub async fn refresh_upstream_if_needed<S, K>(
         &self,
         session: &mut OAuthSession,
         session_store: &S,
         key_store: &K,
-        _nonce_store: &N,
     ) -> Result<()>
     where
         S: OAuthSessionStore,
         K: KeyStore,
-        N: NonceStore,
     {
         // Check if refresh needed (5 min buffer)
         if !session.needs_refresh(5) {
@@ -262,26 +260,21 @@ impl TokenManager {
 
     fn create_dpop_proof(
         &self,
-        _key: &jose_jwk::Jwk,
+        key: &jose_jwk::Jwk,
         method: Method,
         url: &Url,
         nonce: Option<&str>,
     ) -> Result<String> {
-        let mut claims = json!({
-            "jti": generate_jti(),
-            "htm": method.as_str(),
-            "htu": url.as_str(),
-            "iat": Utc::now().timestamp(),
-            "exp": (Utc::now() + Duration::minutes(1)).timestamp(),
-        });
-
-        if let Some(n) = nonce {
-            claims["nonce"] = json!(n);
-        }
-
-        // TODO: Implement DPoP proof signing
-        // For now, return a placeholder
-        Ok(format!("dpop_proof_{}", claims["jti"]))
+        // Use the async implementation synchronously via blocking
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(self.create_upstream_dpop_proof(
+                method.as_str(),
+                url.as_str(),
+                None, // no access token for token endpoint calls
+                nonce,
+                key,
+            ))
+        })
     }
 
     /// Create a DPoP proof for an upstream PDS request
@@ -405,16 +398,9 @@ pub struct ConfirmationClaim {
     pub jkt: String, // DPoP JKT
 }
 
-fn generate_jti() -> String {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
-    let bytes: [u8; 16] = rng.r#gen();
-    hex::encode(bytes)
-}
-
+const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 fn generate_random_string(len: usize) -> String {
     use rand::Rng;
-    const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let mut rng = rand::thread_rng();
     (0..len)
         .map(|_| {

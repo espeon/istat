@@ -30,50 +30,8 @@
             "statuses": {
               "type": "array",
               "items": {
-                "type": "object",
-                "required": ["did", "handle", "rkey", "emojiUrl", "createdAt"],
-                "properties": {
-                  "did": {
-                    "type": "string",
-                    "format": "did",
-                    "description": "The user's DID"
-                  },
-                  "handle": {
-                    "type": "string",
-                    "format": "handle",
-                    "description": "The user's handle"
-                  },
-                  "rkey": {
-                    "type": "string",
-                    "description": "The record key"
-                  },
-                  "emojiUrl": {
-                    "type": "string",
-                    "description": "URL to the emoji"
-                  },
-                  "title": {
-                    "type": "string",
-                    "description": "Optional status text title",
-                    "maxLength": 2560,
-                    "maxGraphemes": 256
-                  },
-                  "description": {
-                    "type": "string",
-                    "description": "Optional status text description",
-                    "maxLength": 20480,
-                    "maxGraphemes": 2048
-                  },
-                  "expires": {
-                    "type": "string",
-                    "format": "datetime",
-                    "description": "Optional expiration timestamp"
-                  },
-                  "createdAt": {
-                    "type": "string",
-                    "format": "datetime",
-                    "description": "When this status was created"
-                  }
-                }
+                "type": "ref",
+                "ref": "#statusView"
               }
             },
             "cursor": {
@@ -81,6 +39,70 @@
               "description": "Pagination cursor for next page"
             }
           }
+        }
+      }
+    },
+    "statusView": {
+      "type": "object",
+      "required": ["did", "handle", "rkey", "emojiUrl", "createdAt"],
+      "properties": {
+        "did": {
+          "type": "string",
+          "format": "did",
+          "description": "The user's DID"
+        },
+        "handle": {
+          "type": "string",
+          "format": "handle",
+          "description": "The user's handle"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name from their profile",
+          "maxLength": 640,
+          "maxGraphemes": 64
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "URL to the user's avatar image"
+        },
+        "rkey": {
+          "type": "string",
+          "description": "The record key"
+        },
+        "emojiUrl": {
+          "type": "string",
+          "description": "URL to the emoji"
+        },
+        "emojiName": {
+          "type": "string",
+          "description": "Canonical name/identifier for the emoji (no spaces, e.g. 'POGGERS', 'Cinema')"
+        },
+        "emojiAlt": {
+          "type": "string",
+          "description": "Alt text for the emoji"
+        },
+        "title": {
+          "type": "string",
+          "description": "Optional status text title",
+          "maxLength": 2560,
+          "maxGraphemes": 256
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional status text description",
+          "maxLength": 20480,
+          "maxGraphemes": 2048
+        },
+        "expires": {
+          "type": "string",
+          "format": "datetime",
+          "description": "Optional expiration timestamp"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "datetime",
+          "description": "When this status was created"
         }
       }
     }

@@ -3,17 +3,21 @@ name = "jacquard-oatproxy"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["axum"]
+axum = ["dep:axum"]
+
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
-axum = "0.8"
+axum = { version = "0.8", optional = true }
 chrono = { version = "0.4", features = ["serde"] }
 dpop-verifier = "4.4"
 hex = "0.4"
 http = "1.2"
-jacquard-common = { git = "https://tangled.org/@nonbinary.computer/jacquard"}
-jacquard-identity = { git = "https://tangled.org/@nonbinary.computer/jacquard"}
-jacquard-oauth = { git = "https://tangled.org/@nonbinary.computer/jacquard"}
+jacquard-common = { path = "../../jacquard/crates/jacquard-common" }
+jacquard-identity = { path = "../../jacquard/crates/jacquard-identity" }
+jacquard-oauth = { path = "../../jacquard/crates/jacquard-oauth" }
 jose-jwk = "0.1"
 jose-jws = "0.1"
 p256 = { version = "0.13", features = ["ecdsa"] }

@@ -1,31 +1,25 @@
-use axum::{
-    Json, Router,
-    body::Body,
-    extract::State,
-    http::{Method, StatusCode, Uri, header::COOKIE},
-    response::Response,
-};
-use jacquard::api::com_atproto::identity::resolve_handle::{
-    ResolveHandleOutput, ResolveHandleRequest,
-};
-use jacquard_axum::{ExtractXrpc, IntoRouter};
-use jacquard_common::types::string::Did;
-use lexicons::vg_nat::istat::status::{
-    get_status::{GetStatusOutput, GetStatusRequest},
-    list_statuses::{ListStatusesOutput, ListStatusesRequest},
-    list_user_statuses::{ListUserStatusesOutput, ListUserStatusesRequest},
+use axum::{Router, extract::State, http::header::COOKIE};
+use jacquard::api::com_atproto::identity::resolve_handle::ResolveHandleRequest;
+use jacquard_axum::IntoRouter;
+use lexicons::vg_nat::istat::{
+    actor::get_profile::GetProfileRequest,
+    moji::search_emoji::SearchEmojiRequest,
+    status::{
+        get_status::GetStatusRequest, list_statuses::ListStatusesRequest,
+        list_user_statuses::ListUserStatusesRequest,
+    },
 };
 use miette::{IntoDiagnostic, Result};
 use sqlx::{Row, sqlite::SqlitePool};
-use std::{collections::BTreeMap, str::FromStr};
+use tower_http::cors::CorsLayer;
 
 mod jetstream;
-mod oauth;
+mod oatproxy;
+mod xrpc;
 
 #[derive(Clone)]
 struct AppState {
     db: SqlitePool,
-    auth_store: oauth::SharedAuthStore,
 }
 
 async fn handle_root(State(state): State<AppState>, headers: axum::http::HeaderMap) -> String {
@@ -61,355 +55,11 @@ async fn handle_root(State(state): State<AppState>, headers: axum::http::HeaderM
     "hello world!".to_string()
 }
 
-async fn proxy_to_pds(
-    State(state): State<AppState>,
-    headers: axum::http::HeaderMap,
-    method: Method,
-    uri: Uri,
-    body: Body,
-) -> Result<Response, StatusCode> {
-    // Extract session to get the user's PDS
-    let session_id = headers
-        .get(COOKIE)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|cookies| {
-            cookies.split(';').find_map(|cookie| {
-                let cookie = cookie.trim();
-                cookie.strip_prefix("session_id=")
-            })
-        });
-
-    let pds_url = if let Some(session_id) = session_id {
-        // Look up user's PDS from session
-        if let Ok(Some(row)) = sqlx::query(
-            r#"
-            SELECT did
-            FROM auth_sessions
-            WHERE id = ? AND expires_at > datetime('now')
-            "#,
-        )
-        .bind(session_id)
-        .fetch_optional(&state.db)
-        .await
-        {
-            let _did: String = row.get(0);
-            // Resolve DID to PDS - for now just use bsky.social
-            // TODO: proper DID resolution
-            format!("https://bsky.social")
-        } else {
-            // Default to public API
-            "https://public.api.bsky.app".to_string()
-        }
-    } else {
-        // No session, use public API
-        "https://public.api.bsky.app".to_string()
-    };
-
-    // Build the proxied request
-    let path_and_query = uri
-        .path_and_query()
-        .map(|pq| pq.as_str())
-        .unwrap_or(uri.path());
-
-    let url = format!("{}{}", pds_url, path_and_query);
-
-    let client = reqwest::Client::new();
-    let mut req_builder = client.request(method.clone(), &url);
-
-    // Forward relevant headers
-    for (name, value) in headers.iter() {
-        if name != "host" && name != "connection" {
-            if let Ok(value_str) = value.to_str() {
-                req_builder = req_builder.header(name.as_str(), value_str);
-            }
-        }
-    }
-
-    // Forward body
-    let body_bytes = axum::body::to_bytes(body, usize::MAX)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    if !body_bytes.is_empty() {
-        req_builder = req_builder.body(body_bytes.to_vec());
-    }
-
-    // Execute the request
-    let resp = req_builder
-        .send()
-        .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?;
-
-    // Build response
-    let status = resp.status();
-    let headers = resp.headers().clone();
-    let body_bytes = resp.bytes().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
-
-    let mut response = Response::builder().status(status);
-
-    // Copy response headers
-    for (name, value) in headers.iter() {
-        response = response.header(name, value);
-    }
-
-    response
-        .body(Body::from(body_bytes))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
-}
-
-async fn handle_resolve(
-    ExtractXrpc(req): ExtractXrpc<ResolveHandleRequest>,
-) -> Result<Json<ResolveHandleOutput<'static>>, StatusCode> {
-    let handle = req.handle;
-    let url = format!(
-        "https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle={}",
-        handle
-    );
-    let resp = reqwest::get(&url)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    if !resp.status().is_success() {
-        return Err(StatusCode::NOT_FOUND);
-    }
-    let resp_json: BTreeMap<String, String> = resp
-        .json()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let did_str = resp_json.get("did").ok_or(StatusCode::NOT_FOUND)?;
-    let did = Did::from_str(did_str).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let output = ResolveHandleOutput {
-        did,
-        extra_data: None,
-    };
-
-    Ok(Json(output))
-}
-
-async fn handle_get_status(
-    State(state): State<AppState>,
-    ExtractXrpc(req): ExtractXrpc<GetStatusRequest>,
-) -> Result<Json<GetStatusOutput<'static>>, StatusCode> {
-    let handle = req.handle;
-    let rkey = req.rkey;
-
-    let url = format!(
-        "https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle={}",
-        handle
-    );
-    let resp = reqwest::get(&url)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    if !resp.status().is_success() {
-        return Err(StatusCode::NOT_FOUND);
-    }
-    let resp_json: BTreeMap<String, String> = resp
-        .json()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let did = resp_json
-        .get("did")
-        .ok_or(StatusCode::NOT_FOUND)?
-        .to_string();
-
-    let at_uri = format!("{}/vg.nat.istat.status.record/{}", did, rkey);
-
-    let row = sqlx::query(
-        r#"
-        SELECT at, emoji_ref, emoji_ref_cid, title, description, expires, created_at
-        FROM statuses
-        WHERE at = ?
-        "#,
-    )
-    .bind(&at_uri)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let row = row.ok_or(StatusCode::NOT_FOUND)?;
-
-    let emoji_ref: String = row
-        .try_get("emoji_ref")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let title: Option<String> = row.try_get("title").ok();
-    let description: Option<String> = row.try_get("description").ok();
-    let expires: Option<String> = row.try_get("expires").ok();
-    let created_at: String = row
-        .try_get("created_at")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let emoji_blob_cid = emoji_ref
-        .split('/')
-        .last()
-        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
-    let emoji_url = format!(
-        "https://cdn.bsky.app/img/avatar/plain/{}/{}@jpeg",
-        did, emoji_blob_cid
-    );
-
-    let output = GetStatusOutput {
-        emoji_url: emoji_url.into(),
-        title: title.map(|t| t.into()),
-        description: description.map(|d| d.into()),
-        expires: expires.map(|e| jacquard_common::types::string::Datetime::raw_str(e)),
-        created_at: jacquard_common::types::string::Datetime::raw_str(created_at),
-        extra_data: None,
-    };
-
-    Ok(Json(output))
-}
-
-async fn handle_list_user_statuses(
-    State(state): State<AppState>,
-    ExtractXrpc(req): ExtractXrpc<ListUserStatusesRequest>,
-) -> Result<Json<ListUserStatusesOutput<'static>>, StatusCode> {
-    let handle = req.handle;
-    let limit = req.limit.unwrap_or(50).min(100) as i64;
-
-    let url = format!(
-        "https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle={}",
-        handle
-    );
-    let resp = reqwest::get(&url)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    if !resp.status().is_success() {
-        return Err(StatusCode::NOT_FOUND);
-    }
-    let resp_json: BTreeMap<String, String> = resp
-        .json()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let did = resp_json
-        .get("did")
-        .ok_or(StatusCode::NOT_FOUND)?
-        .to_string();
-
-    let rows = sqlx::query(
-        r#"
-        SELECT rkey, emoji_ref, title, description, expires, created_at
-        FROM statuses
-        WHERE did = ?
-        ORDER BY created_at DESC
-        LIMIT ?
-        "#,
-    )
-    .bind(&did)
-    .bind(limit)
-    .fetch_all(&state.db)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let statuses: Vec<_> = rows
-        .iter()
-        .filter_map(|row| {
-            let rkey: String = row.try_get("rkey").ok()?;
-            let emoji_ref: String = row.try_get("emoji_ref").ok()?;
-            let title: Option<String> = row.try_get("title").ok();
-            let description: Option<String> = row.try_get("description").ok();
-            let expires: Option<String> = row.try_get("expires").ok();
-            let created_at: String = row.try_get("created_at").ok()?;
-
-            let emoji_blob_cid = emoji_ref.split('/').last()?;
-            let emoji_url = format!(
-                "https://cdn.bsky.app/img/avatar/plain/{}/{}@jpeg",
-                did, emoji_blob_cid
-            );
-
-            let json = serde_json::json!({
-                "rkey": rkey,
-                "emojiUrl": emoji_url,
-                "title": title,
-                "description": description,
-                "expires": expires,
-                "createdAt": created_at
-            });
-
-            Some(jacquard_common::types::value::Data::from_json_owned(json).ok()?)
-        })
-        .collect();
-
-    let output = ListUserStatusesOutput {
-        statuses,
-        cursor: None,
-        extra_data: None,
-    };
-
-    Ok(Json(output))
-}
-
-async fn handle_list_statuses(
-    State(state): State<AppState>,
-    ExtractXrpc(req): ExtractXrpc<ListStatusesRequest>,
-) -> Result<Json<ListStatusesOutput<'static>>, StatusCode> {
-    let limit = req.limit.unwrap_or(50).min(100) as i64;
-
-    let rows = sqlx::query(
-        r#"
-        SELECT did, rkey, emoji_ref, title, description, expires, created_at
-        FROM statuses
-        ORDER BY created_at DESC
-        LIMIT ?
-        "#,
-    )
-    .bind(limit)
-    .fetch_all(&state.db)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let statuses: Vec<_> = rows
-        .iter()
-        .filter_map(|row| {
-            let did: String = row.try_get("did").ok()?;
-            let rkey: String = row.try_get("rkey").ok()?;
-            let emoji_ref: String = row.try_get("emoji_ref").ok()?;
-            let title: Option<String> = row.try_get("title").ok();
-            let description: Option<String> = row.try_get("description").ok();
-            let expires: Option<String> = row.try_get("expires").ok();
-            let created_at: String = row.try_get("created_at").ok()?;
-
-            let emoji_blob_cid = emoji_ref.split('/').last()?;
-            let emoji_url = format!(
-                "https://cdn.bsky.app/img/avatar/plain/{}/{}@jpeg",
-                did, emoji_blob_cid
-            );
-
-            // TODO: resolve DIDs to handles - for now just use the DID
-            let json = serde_json::json!({
-                "did": did,
-                "handle": did,
-                "rkey": rkey,
-                "emojiUrl": emoji_url,
-                "title": title,
-                "description": description,
-                "expires": expires,
-                "createdAt": created_at
-            });
-
-            Some(jacquard_common::types::value::Data::from_json_owned(json).ok()?)
-        })
-        .collect();
-
-    let output = ListStatusesOutput {
-        statuses,
-        cursor: None,
-        extra_data: None,
-    };
-
-    Ok(Json(output))
-}
-
 async fn init_db(db_url: &str) -> Result<SqlitePool> {
     let pool = SqlitePool::connect(db_url).await.into_diagnostic()?;
 
-    let migration_sql = include_str!("../migrations/001_initial_schema.sql");
-    sqlx::raw_sql(migration_sql)
-        .execute(&pool)
-        .await
-        .into_diagnostic()?;
-
-    let migration_sql_2 = include_str!("../migrations/002_auth_schema.sql");
-    sqlx::raw_sql(migration_sql_2)
-        .execute(&pool)
+    sqlx::migrate!("./migrations")
+        .run(&pool)
         .await
         .into_diagnostic()?;
 
@@ -418,7 +68,25 @@ async fn init_db(db_url: &str) -> Result<SqlitePool> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Initialize tracing
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::filter::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                "simple_server=debug,jacquard_oauth_proxy=debug,info"
+                    .parse()
+                    .unwrap()
+            }),
+        )
+        .init();
+
     let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:istat.db".to_string());
+    let public_url =
+        std::env::var("PUBLIC_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+    let bind_addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3000".to_string());
+
+    tracing::info!("Public URL: {}", public_url);
+    tracing::info!("Bind address: {}", bind_addr);
+
     let pool = init_db(&db_url).await?;
 
     let jetstream_pool = pool.clone();
@@ -428,34 +96,161 @@ async fn main() -> Result<()> {
         }
     });
 
-    let state = AppState {
-        db: pool,
-        auth_store: oauth::SharedAuthStore::new(),
+    // Set up OAuth proxy
+    // Load or generate signing key
+    let signing_key = match sqlx::query("SELECT private_key FROM oatproxy_signing_key WHERE id = 1")
+        .fetch_optional(&pool)
+        .await
+        .into_diagnostic()?
+    {
+        Some(row) => {
+            let key_bytes: Vec<u8> = row.try_get("private_key").into_diagnostic()?;
+            let key_array: [u8; 32] = key_bytes
+                .try_into()
+                .map_err(|_| miette::miette!("invalid signing key length"))?;
+            Some(p256::ecdsa::SigningKey::from_bytes(&key_array.into()).into_diagnostic()?)
+        }
+        None => {
+            let signing_key = p256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng);
+            let key_bytes = signing_key.to_bytes();
+
+            sqlx::query("INSERT INTO oatproxy_signing_key (id, private_key) VALUES (1, ?)")
+                .bind(&key_bytes[..])
+                .execute(&pool)
+                .await
+                .into_diagnostic()?;
+
+            Some(signing_key)
+        }
     };
 
+    // Load or generate HMAC secret for DPoP nonces
+    let hmac_secret =
+        match sqlx::query("SELECT hmac_secret FROM oatproxy_dpop_hmac_secret WHERE id = 1")
+            .fetch_optional(&pool)
+            .await
+            .into_diagnostic()?
+        {
+            Some(row) => row.try_get::<Vec<u8>, _>("hmac_secret").into_diagnostic()?,
+            None => {
+                let mut secret = vec![0u8; 32];
+                rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut secret);
+
+                sqlx::query(
+                    "INSERT INTO oatproxy_dpop_hmac_secret (id, hmac_secret) VALUES (1, ?)",
+                )
+                .bind(&secret)
+                .execute(&pool)
+                .await
+                .into_diagnostic()?;
+
+                secret
+            }
+        };
+
+    let mut store_builder = oatproxy::SqliteStore::builder(pool.clone());
+    if let Some(key) = signing_key {
+        store_builder = store_builder.with_signing_key(key);
+    }
+    let oatproxy_store = store_builder.build();
+    let proxy_config =
+        jacquard_oatproxy::ProxyConfig::new(url::Url::parse(&public_url).into_diagnostic()?)
+            .with_dpop_nonce_secret(hmac_secret);
+
+    let oatproxy_server = jacquard_oatproxy::OAuthProxyServer::builder()
+        .config(proxy_config)
+        .session_store(oatproxy_store.clone())
+        .key_store(oatproxy_store.clone())
+        .build()
+        .into_diagnostic()?;
+
+    let state = AppState { db: pool };
+
     let xrpc_router = Router::new()
-        .merge(ResolveHandleRequest::into_router(handle_resolve))
-        .merge(GetStatusRequest::into_router(handle_get_status))
+        .merge(ResolveHandleRequest::into_router(xrpc::handle_resolve))
+        .merge(GetProfileRequest::into_router(xrpc::handle_get_profile))
+        .merge(SearchEmojiRequest::into_router(xrpc::handle_search_emoji))
+        .merge(GetStatusRequest::into_router(xrpc::handle_get_status))
         .merge(ListUserStatusesRequest::into_router(
-            handle_list_user_statuses,
+            xrpc::handle_list_user_statuses,
         ))
-        .merge(ListStatusesRequest::into_router(handle_list_statuses))
-        .fallback(proxy_to_pds)
+        .merge(ListStatusesRequest::into_router(xrpc::handle_list_statuses))
         .with_state(state.clone());
 
-    let app = Router::new()
-        .route("/", axum::routing::get(handle_root))
-        .route("/oauth/login", axum::routing::get(oauth::start_login))
-        .route(
-            "/oauth/callback",
-            axum::routing::get(oauth::handle_callback),
-        )
-        .nest("/xrpc", xrpc_router)
-        .with_state(state);
+    let dev_mode = std::env::var("DEV_MODE").unwrap_or_default() == "true";
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+    let app = if dev_mode {
+        // In dev mode, proxy non-API requests to Vite dev server
+        tracing::info!("Running in dev mode - proxying to Vite at localhost:3001");
+
+        let client = reqwest::Client::new();
+
+        // Create a service that tries oatproxy, then vite
+        let vite_proxy = move |req: axum::http::Request<axum::body::Body>| {
+            let client = client.clone();
+            async move {
+                let uri = req.uri();
+                let path_and_query = uri
+                    .path_and_query()
+                    .map(|pq| pq.as_str())
+                    .unwrap_or(uri.path());
+
+                // Proxy to Vite dev server
+                let proxy_url = format!("http://localhost:3001{}", path_and_query);
+
+                match client
+                    .request(req.method().clone(), &proxy_url)
+                    .send()
+                    .await
+                {
+                    Ok(response) => {
+                        let status = response.status();
+                        let mut builder = axum::http::Response::builder().status(status);
+
+                        // Copy relevant headers
+                        for (key, value) in response.headers() {
+                            if key != "content-length" && key != "transfer-encoding" {
+                                builder = builder.header(key, value);
+                            }
+                        }
+
+                        let body = response.bytes().await.unwrap_or_default();
+                        builder.body(axum::body::Body::from(body)).unwrap()
+                    }
+                    Err(e) => {
+                        tracing::error!("Proxy error for {}: {}", proxy_url, e);
+                        axum::http::Response::builder()
+                            .status(502)
+                            .body(axum::body::Body::from("Bad Gateway"))
+                            .unwrap()
+                    }
+                }
+            }
+        };
+
+        Router::new()
+            .merge(xrpc_router)
+            .with_state(state.clone())
+            .fallback_service(oatproxy_server.router().fallback(vite_proxy))
+            .layer(CorsLayer::permissive())
+    } else {
+        // In prod mode, use OAuth proxy as fallback
+        Router::new()
+            .route("/", axum::routing::get(handle_root))
+            .merge(xrpc_router)
+            .with_state(state)
+            .fallback_service(oatproxy_server.router())
+            .layer(CorsLayer::permissive())
+    };
+
+    let listener = tokio::net::TcpListener::bind(&bind_addr)
         .await
         .into_diagnostic()?;
+    tracing::info!(
+        "Server listening on {}",
+        listener.local_addr().into_diagnostic()?
+    );
+
     axum::serve(listener, app).await.unwrap();
     Ok(())
 }

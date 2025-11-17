@@ -1,0 +1,68 @@
+{
+  "lexicon": 1,
+  "id": "vg.nat.istat.actor.getProfile",
+  "defs": {
+    "main": {
+      "type": "query",
+      "description": "Get profile information for a user",
+      "parameters": {
+        "type": "params",
+        "required": ["actor"],
+        "properties": {
+          "actor": {
+            "type": "string",
+            "format": "at-identifier",
+            "description": "Handle or DID of account to fetch profile of"
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["did", "handle"],
+          "properties": {
+            "did": {
+              "type": "string",
+              "format": "did"
+            },
+            "handle": {
+              "type": "string",
+              "format": "handle"
+            },
+            "displayName": {
+              "type": "string",
+              "maxLength": 640,
+              "maxGraphemes": 64
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 2560,
+              "maxGraphemes": 256
+            },
+            "avatar": {
+              "type": "string",
+              "description": "URL to avatar image"
+            },
+            "banner": {
+              "type": "string",
+              "description": "URL to banner image"
+            },
+            "pronouns": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "website": {
+              "type": "string",
+              "maxLength": 512
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "datetime"
+            }
+          }
+        }
+      }
+    }
+  }
+}

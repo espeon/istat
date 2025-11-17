@@ -7,12 +7,17 @@
       "key": "tid",
       "record": {
         "type": "object",
-        "required": ["emoji"],
+        "required": ["emoji", "name"],
         "properties": {
           "emoji": {
             "type": "blob",
             "accept": ["image/*"],
             "maxSize": 1000000
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Canonical name/identifier for the emoji (no spaces, e.g. 'POGGERS', 'Cinema')"
           },
           "altText": {
             "type": "string",

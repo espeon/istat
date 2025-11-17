@@ -130,7 +130,7 @@ pub struct ListStatusesOutput<'a> {
     #[serde(borrow)]
     pub cursor: std::option::Option<jacquard_common::CowStr<'a>>,
     #[serde(borrow)]
-    pub statuses: Vec<jacquard_common::types::value::Data<'a>>,
+    pub statuses: Vec<crate::vg_nat::istat::status::list_statuses::StatusView<'a>>,
 }
 
 /// Response type for
@@ -157,4 +157,908 @@ impl jacquard_common::xrpc::XrpcEndpoint for ListStatusesRequest {
     const METHOD: jacquard_common::xrpc::XrpcMethod = jacquard_common::xrpc::XrpcMethod::Query;
     type Request<'de> = ListStatuses<'de>;
     type Response = ListStatusesResponse;
+}
+
+#[jacquard_derive::lexicon]
+#[derive(
+    serde::Serialize,
+    serde::Deserialize,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    jacquard_derive::IntoStatic
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StatusView<'a> {
+    /// URL to the user's avatar image
+    #[serde(skip_serializing_if = "std::option::Option::is_none")]
+    #[serde(borrow)]
+    pub avatar_url: Option<jacquard_common::CowStr<'a>>,
+    /// When this status was created
+    pub created_at: jacquard_common::types::string::Datetime,
+    /// Optional status text description
+    #[serde(skip_serializing_if = "std::option::Option::is_none")]
+    #[serde(borrow)]
+    pub description: Option<jacquard_common::CowStr<'a>>,
+    /// The user's DID
+    #[serde(borrow)]
+    pub did: jacquard_common::types::string::Did<'a>,
+    /// The user's display name from their profile
+    #[serde(skip_serializing_if = "std::option::Option::is_none")]
+    #[serde(borrow)]
+    pub display_name: Option<jacquard_common::CowStr<'a>>,
+    /// Alt text for the emoji
+    #[serde(skip_serializing_if = "std::option::Option::is_none")]
+    #[serde(borrow)]
+    pub emoji_alt: Option<jacquard_common::CowStr<'a>>,
+    /// Canonical name/identifier for the emoji (no spaces, e.g. 'POGGERS', 'Cinema')
+    #[serde(skip_serializing_if = "std::option::Option::is_none")]
+    #[serde(borrow)]
+    pub emoji_name: Option<jacquard_common::CowStr<'a>>,
+    /// URL to the emoji
+    #[serde(borrow)]
+    pub emoji_url: jacquard_common::CowStr<'a>,
+    /// Optional expiration timestamp
+    #[serde(skip_serializing_if = "std::option::Option::is_none")]
+    pub expires: Option<jacquard_common::types::string::Datetime>,
+    /// The user's handle
+    #[serde(borrow)]
+    pub handle: jacquard_common::types::string::Handle<'a>,
+    /// The record key
+    #[serde(borrow)]
+    pub rkey: jacquard_common::CowStr<'a>,
+    /// Optional status text title
+    #[serde(skip_serializing_if = "std::option::Option::is_none")]
+    #[serde(borrow)]
+    pub title: Option<jacquard_common::CowStr<'a>>,
+}
+
+pub mod status_view_state {
+
+    pub use crate::builder_types::{Set, Unset, IsSet, IsUnset};
+    #[allow(unused)]
+    use ::core::marker::PhantomData;
+    mod sealed {
+        pub trait Sealed {}
+    }
+    /// State trait tracking which required fields have been set
+    pub trait State: sealed::Sealed {
+        type Did;
+        type Handle;
+        type Rkey;
+        type EmojiUrl;
+        type CreatedAt;
+    }
+    /// Empty state - all required fields are unset
+    pub struct Empty(());
+    impl sealed::Sealed for Empty {}
+    impl State for Empty {
+        type Did = Unset;
+        type Handle = Unset;
+        type Rkey = Unset;
+        type EmojiUrl = Unset;
+        type CreatedAt = Unset;
+    }
+    ///State transition - sets the `did` field to Set
+    pub struct SetDid<S: State = Empty>(PhantomData<fn() -> S>);
+    impl<S: State> sealed::Sealed for SetDid<S> {}
+    impl<S: State> State for SetDid<S> {
+        type Did = Set<members::did>;
+        type Handle = S::Handle;
+        type Rkey = S::Rkey;
+        type EmojiUrl = S::EmojiUrl;
+        type CreatedAt = S::CreatedAt;
+    }
+    ///State transition - sets the `handle` field to Set
+    pub struct SetHandle<S: State = Empty>(PhantomData<fn() -> S>);
+    impl<S: State> sealed::Sealed for SetHandle<S> {}
+    impl<S: State> State for SetHandle<S> {
+        type Did = S::Did;
+        type Handle = Set<members::handle>;
+        type Rkey = S::Rkey;
+        type EmojiUrl = S::EmojiUrl;
+        type CreatedAt = S::CreatedAt;
+    }
+    ///State transition - sets the `rkey` field to Set
+    pub struct SetRkey<S: State = Empty>(PhantomData<fn() -> S>);
+    impl<S: State> sealed::Sealed for SetRkey<S> {}
+    impl<S: State> State for SetRkey<S> {
+        type Did = S::Did;
+        type Handle = S::Handle;
+        type Rkey = Set<members::rkey>;
+        type EmojiUrl = S::EmojiUrl;
+        type CreatedAt = S::CreatedAt;
+    }
+    ///State transition - sets the `emoji_url` field to Set
+    pub struct SetEmojiUrl<S: State = Empty>(PhantomData<fn() -> S>);
+    impl<S: State> sealed::Sealed for SetEmojiUrl<S> {}
+    impl<S: State> State for SetEmojiUrl<S> {
+        type Did = S::Did;
+        type Handle = S::Handle;
+        type Rkey = S::Rkey;
+        type EmojiUrl = Set<members::emoji_url>;
+        type CreatedAt = S::CreatedAt;
+    }
+    ///State transition - sets the `created_at` field to Set
+    pub struct SetCreatedAt<S: State = Empty>(PhantomData<fn() -> S>);
+    impl<S: State> sealed::Sealed for SetCreatedAt<S> {}
+    impl<S: State> State for SetCreatedAt<S> {
+        type Did = S::Did;
+        type Handle = S::Handle;
+        type Rkey = S::Rkey;
+        type EmojiUrl = S::EmojiUrl;
+        type CreatedAt = Set<members::created_at>;
+    }
+    /// Marker types for field names
+    #[allow(non_camel_case_types)]
+    pub mod members {
+        ///Marker type for the `did` field
+        pub struct did(());
+        ///Marker type for the `handle` field
+        pub struct handle(());
+        ///Marker type for the `rkey` field
+        pub struct rkey(());
+        ///Marker type for the `emoji_url` field
+        pub struct emoji_url(());
+        ///Marker type for the `created_at` field
+        pub struct created_at(());
+    }
+}
+
+/// Builder for constructing an instance of this type
+pub struct StatusViewBuilder<'a, S: status_view_state::State> {
+    _phantom_state: ::core::marker::PhantomData<fn() -> S>,
+    __unsafe_private_named: (
+        ::core::option::Option<jacquard_common::CowStr<'a>>,
+        ::core::option::Option<jacquard_common::types::string::Datetime>,
+        ::core::option::Option<jacquard_common::CowStr<'a>>,
+        ::core::option::Option<jacquard_common::types::string::Did<'a>>,
+        ::core::option::Option<jacquard_common::CowStr<'a>>,
+        ::core::option::Option<jacquard_common::CowStr<'a>>,
+        ::core::option::Option<jacquard_common::CowStr<'a>>,
+        ::core::option::Option<jacquard_common::CowStr<'a>>,
+        ::core::option::Option<jacquard_common::types::string::Datetime>,
+        ::core::option::Option<jacquard_common::types::string::Handle<'a>>,
+        ::core::option::Option<jacquard_common::CowStr<'a>>,
+        ::core::option::Option<jacquard_common::CowStr<'a>>,
+    ),
+    _phantom: ::core::marker::PhantomData<&'a ()>,
+}
+
+impl<'a> StatusView<'a> {
+    /// Create a new builder for this type
+    pub fn new() -> StatusViewBuilder<'a, status_view_state::Empty> {
+        StatusViewBuilder::new()
+    }
+}
+
+impl<'a> StatusViewBuilder<'a, status_view_state::Empty> {
+    /// Create a new builder with all fields unset
+    pub fn new() -> Self {
+        StatusViewBuilder {
+            _phantom_state: ::core::marker::PhantomData,
+            __unsafe_private_named: (
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ),
+            _phantom: ::core::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
+    /// Set the `avatarUrl` field (optional)
+    pub fn avatar_url(
+        mut self,
+        value: impl Into<Option<jacquard_common::CowStr<'a>>>,
+    ) -> Self {
+        self.__unsafe_private_named.0 = value.into();
+        self
+    }
+    /// Set the `avatarUrl` field to an Option value (optional)
+    pub fn maybe_avatar_url(
+        mut self,
+        value: Option<jacquard_common::CowStr<'a>>,
+    ) -> Self {
+        self.__unsafe_private_named.0 = value;
+        self
+    }
+}
+
+impl<'a, S> StatusViewBuilder<'a, S>
+where
+    S: status_view_state::State,
+    S::CreatedAt: status_view_state::IsUnset,
+{
+    /// Set the `createdAt` field (required)
+    pub fn created_at(
+        mut self,
+        value: impl Into<jacquard_common::types::string::Datetime>,
+    ) -> StatusViewBuilder<'a, status_view_state::SetCreatedAt<S>> {
+        self.__unsafe_private_named.1 = ::core::option::Option::Some(value.into());
+        StatusViewBuilder {
+            _phantom_state: ::core::marker::PhantomData,
+            __unsafe_private_named: self.__unsafe_private_named,
+            _phantom: ::core::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
+    /// Set the `description` field (optional)
+    pub fn description(
+        mut self,
+        value: impl Into<Option<jacquard_common::CowStr<'a>>>,
+    ) -> Self {
+        self.__unsafe_private_named.2 = value.into();
+        self
+    }
+    /// Set the `description` field to an Option value (optional)
+    pub fn maybe_description(
+        mut self,
+        value: Option<jacquard_common::CowStr<'a>>,
+    ) -> Self {
+        self.__unsafe_private_named.2 = value;
+        self
+    }
+}
+
+impl<'a, S> StatusViewBuilder<'a, S>
+where
+    S: status_view_state::State,
+    S::Did: status_view_state::IsUnset,
+{
+    /// Set the `did` field (required)
+    pub fn did(
+        mut self,
+        value: impl Into<jacquard_common::types::string::Did<'a>>,
+    ) -> StatusViewBuilder<'a, status_view_state::SetDid<S>> {
+        self.__unsafe_private_named.3 = ::core::option::Option::Some(value.into());
+        StatusViewBuilder {
+            _phantom_state: ::core::marker::PhantomData,
+            __unsafe_private_named: self.__unsafe_private_named,
+            _phantom: ::core::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
+    /// Set the `displayName` field (optional)
+    pub fn display_name(
+        mut self,
+        value: impl Into<Option<jacquard_common::CowStr<'a>>>,
+    ) -> Self {
+        self.__unsafe_private_named.4 = value.into();
+        self
+    }
+    /// Set the `displayName` field to an Option value (optional)
+    pub fn maybe_display_name(
+        mut self,
+        value: Option<jacquard_common::CowStr<'a>>,
+    ) -> Self {
+        self.__unsafe_private_named.4 = value;
+        self
+    }
+}
+
+impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
+    /// Set the `emojiAlt` field (optional)
+    pub fn emoji_alt(
+        mut self,
+        value: impl Into<Option<jacquard_common::CowStr<'a>>>,
+    ) -> Self {
+        self.__unsafe_private_named.5 = value.into();
+        self
+    }
+    /// Set the `emojiAlt` field to an Option value (optional)
+    pub fn maybe_emoji_alt(
+        mut self,
+        value: Option<jacquard_common::CowStr<'a>>,
+    ) -> Self {
+        self.__unsafe_private_named.5 = value;
+        self
+    }
+}
+
+impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
+    /// Set the `emojiName` field (optional)
+    pub fn emoji_name(
+        mut self,
+        value: impl Into<Option<jacquard_common::CowStr<'a>>>,
+    ) -> Self {
+        self.__unsafe_private_named.6 = value.into();
+        self
+    }
+    /// Set the `emojiName` field to an Option value (optional)
+    pub fn maybe_emoji_name(
+        mut self,
+        value: Option<jacquard_common::CowStr<'a>>,
+    ) -> Self {
+        self.__unsafe_private_named.6 = value;
+        self
+    }
+}
+
+impl<'a, S> StatusViewBuilder<'a, S>
+where
+    S: status_view_state::State,
+    S::EmojiUrl: status_view_state::IsUnset,
+{
+    /// Set the `emojiUrl` field (required)
+    pub fn emoji_url(
+        mut self,
+        value: impl Into<jacquard_common::CowStr<'a>>,
+    ) -> StatusViewBuilder<'a, status_view_state::SetEmojiUrl<S>> {
+        self.__unsafe_private_named.7 = ::core::option::Option::Some(value.into());
+        StatusViewBuilder {
+            _phantom_state: ::core::marker::PhantomData,
+            __unsafe_private_named: self.__unsafe_private_named,
+            _phantom: ::core::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
+    /// Set the `expires` field (optional)
+    pub fn expires(
+        mut self,
+        value: impl Into<Option<jacquard_common::types::string::Datetime>>,
+    ) -> Self {
+        self.__unsafe_private_named.8 = value.into();
+        self
+    }
+    /// Set the `expires` field to an Option value (optional)
+    pub fn maybe_expires(
+        mut self,
+        value: Option<jacquard_common::types::string::Datetime>,
+    ) -> Self {
+        self.__unsafe_private_named.8 = value;
+        self
+    }
+}
+
+impl<'a, S> StatusViewBuilder<'a, S>
+where
+    S: status_view_state::State,
+    S::Handle: status_view_state::IsUnset,
+{
+    /// Set the `handle` field (required)
+    pub fn handle(
+        mut self,
+        value: impl Into<jacquard_common::types::string::Handle<'a>>,
+    ) -> StatusViewBuilder<'a, status_view_state::SetHandle<S>> {
+        self.__unsafe_private_named.9 = ::core::option::Option::Some(value.into());
+        StatusViewBuilder {
+            _phantom_state: ::core::marker::PhantomData,
+            __unsafe_private_named: self.__unsafe_private_named,
+            _phantom: ::core::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, S> StatusViewBuilder<'a, S>
+where
+    S: status_view_state::State,
+    S::Rkey: status_view_state::IsUnset,
+{
+    /// Set the `rkey` field (required)
+    pub fn rkey(
+        mut self,
+        value: impl Into<jacquard_common::CowStr<'a>>,
+    ) -> StatusViewBuilder<'a, status_view_state::SetRkey<S>> {
+        self.__unsafe_private_named.10 = ::core::option::Option::Some(value.into());
+        StatusViewBuilder {
+            _phantom_state: ::core::marker::PhantomData,
+            __unsafe_private_named: self.__unsafe_private_named,
+            _phantom: ::core::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
+    /// Set the `title` field (optional)
+    pub fn title(
+        mut self,
+        value: impl Into<Option<jacquard_common::CowStr<'a>>>,
+    ) -> Self {
+        self.__unsafe_private_named.11 = value.into();
+        self
+    }
+    /// Set the `title` field to an Option value (optional)
+    pub fn maybe_title(mut self, value: Option<jacquard_common::CowStr<'a>>) -> Self {
+        self.__unsafe_private_named.11 = value;
+        self
+    }
+}
+
+impl<'a, S> StatusViewBuilder<'a, S>
+where
+    S: status_view_state::State,
+    S::Did: status_view_state::IsSet,
+    S::Handle: status_view_state::IsSet,
+    S::Rkey: status_view_state::IsSet,
+    S::EmojiUrl: status_view_state::IsSet,
+    S::CreatedAt: status_view_state::IsSet,
+{
+    /// Build the final struct
+    pub fn build(self) -> StatusView<'a> {
+        StatusView {
+            avatar_url: self.__unsafe_private_named.0,
+            created_at: self.__unsafe_private_named.1.unwrap(),
+            description: self.__unsafe_private_named.2,
+            did: self.__unsafe_private_named.3.unwrap(),
+            display_name: self.__unsafe_private_named.4,
+            emoji_alt: self.__unsafe_private_named.5,
+            emoji_name: self.__unsafe_private_named.6,
+            emoji_url: self.__unsafe_private_named.7.unwrap(),
+            expires: self.__unsafe_private_named.8,
+            handle: self.__unsafe_private_named.9.unwrap(),
+            rkey: self.__unsafe_private_named.10.unwrap(),
+            title: self.__unsafe_private_named.11,
+            extra_data: Default::default(),
+        }
+    }
+    /// Build the final struct with custom extra_data
+    pub fn build_with_data(
+        self,
+        extra_data: std::collections::BTreeMap<
+            jacquard_common::smol_str::SmolStr,
+            jacquard_common::types::value::Data<'a>,
+        >,
+    ) -> StatusView<'a> {
+        StatusView {
+            avatar_url: self.__unsafe_private_named.0,
+            created_at: self.__unsafe_private_named.1.unwrap(),
+            description: self.__unsafe_private_named.2,
+            did: self.__unsafe_private_named.3.unwrap(),
+            display_name: self.__unsafe_private_named.4,
+            emoji_alt: self.__unsafe_private_named.5,
+            emoji_name: self.__unsafe_private_named.6,
+            emoji_url: self.__unsafe_private_named.7.unwrap(),
+            expires: self.__unsafe_private_named.8,
+            handle: self.__unsafe_private_named.9.unwrap(),
+            rkey: self.__unsafe_private_named.10.unwrap(),
+            title: self.__unsafe_private_named.11,
+            extra_data: Some(extra_data),
+        }
+    }
+}
+
+fn lexicon_doc_vg_nat_istat_status_listStatuses() -> ::jacquard_lexicon::lexicon::LexiconDoc<
+    'static,
+> {
+    ::jacquard_lexicon::lexicon::LexiconDoc {
+        lexicon: ::jacquard_lexicon::lexicon::Lexicon::Lexicon1,
+        id: ::jacquard_common::CowStr::new_static("vg.nat.istat.status.listStatuses"),
+        revision: None,
+        description: None,
+        defs: {
+            let mut map = ::std::collections::BTreeMap::new();
+            map.insert(
+                ::jacquard_common::smol_str::SmolStr::new_static("main"),
+                ::jacquard_lexicon::lexicon::LexUserType::XrpcQuery(::jacquard_lexicon::lexicon::LexXrpcQuery {
+                    description: None,
+                    parameters: Some(
+                        ::jacquard_lexicon::lexicon::LexXrpcQueryParameter::Params(::jacquard_lexicon::lexicon::LexXrpcParameters {
+                            description: None,
+                            required: None,
+                            properties: {
+                                #[allow(unused_mut)]
+                                let mut map = ::std::collections::BTreeMap::new();
+                                map.insert(
+                                    ::jacquard_common::smol_str::SmolStr::new_static("cursor"),
+                                    ::jacquard_lexicon::lexicon::LexXrpcParametersProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                        description: Some(
+                                            ::jacquard_common::CowStr::new_static("Pagination cursor"),
+                                        ),
+                                        format: None,
+                                        default: None,
+                                        min_length: None,
+                                        max_length: None,
+                                        min_graphemes: None,
+                                        max_graphemes: None,
+                                        r#enum: None,
+                                        r#const: None,
+                                        known_values: None,
+                                    }),
+                                );
+                                map.insert(
+                                    ::jacquard_common::smol_str::SmolStr::new_static("limit"),
+                                    ::jacquard_lexicon::lexicon::LexXrpcParametersProperty::Integer(::jacquard_lexicon::lexicon::LexInteger {
+                                        description: None,
+                                        default: None,
+                                        minimum: None,
+                                        maximum: None,
+                                        r#enum: None,
+                                        r#const: None,
+                                    }),
+                                );
+                                map
+                            },
+                        }),
+                    ),
+                    output: None,
+                    errors: None,
+                }),
+            );
+            map.insert(
+                ::jacquard_common::smol_str::SmolStr::new_static("statusView"),
+                ::jacquard_lexicon::lexicon::LexUserType::Object(::jacquard_lexicon::lexicon::LexObject {
+                    description: None,
+                    required: Some(
+                        vec![
+                            ::jacquard_common::smol_str::SmolStr::new_static("did"),
+                            ::jacquard_common::smol_str::SmolStr::new_static("handle"),
+                            ::jacquard_common::smol_str::SmolStr::new_static("rkey"),
+                            ::jacquard_common::smol_str::SmolStr::new_static("emojiUrl"),
+                            ::jacquard_common::smol_str::SmolStr::new_static("createdAt")
+                        ],
+                    ),
+                    nullable: None,
+                    properties: {
+                        #[allow(unused_mut)]
+                        let mut map = ::std::collections::BTreeMap::new();
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static(
+                                "avatarUrl",
+                            ),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static(
+                                        "URL to the user's avatar image",
+                                    ),
+                                ),
+                                format: None,
+                                default: None,
+                                min_length: None,
+                                max_length: None,
+                                min_graphemes: None,
+                                max_graphemes: None,
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static(
+                                "createdAt",
+                            ),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static(
+                                        "When this status was created",
+                                    ),
+                                ),
+                                format: Some(
+                                    ::jacquard_lexicon::lexicon::LexStringFormat::Datetime,
+                                ),
+                                default: None,
+                                min_length: None,
+                                max_length: None,
+                                min_graphemes: None,
+                                max_graphemes: None,
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static(
+                                "description",
+                            ),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static(
+                                        "Optional status text description",
+                                    ),
+                                ),
+                                format: None,
+                                default: None,
+                                min_length: None,
+                                max_length: Some(20480usize),
+                                min_graphemes: None,
+                                max_graphemes: Some(2048usize),
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static("did"),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static("The user's DID"),
+                                ),
+                                format: Some(
+                                    ::jacquard_lexicon::lexicon::LexStringFormat::Did,
+                                ),
+                                default: None,
+                                min_length: None,
+                                max_length: None,
+                                min_graphemes: None,
+                                max_graphemes: None,
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static(
+                                "displayName",
+                            ),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static(
+                                        "The user's display name from their profile",
+                                    ),
+                                ),
+                                format: None,
+                                default: None,
+                                min_length: None,
+                                max_length: Some(640usize),
+                                min_graphemes: None,
+                                max_graphemes: Some(64usize),
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static("emojiAlt"),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static(
+                                        "Alt text for the emoji",
+                                    ),
+                                ),
+                                format: None,
+                                default: None,
+                                min_length: None,
+                                max_length: None,
+                                min_graphemes: None,
+                                max_graphemes: None,
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static(
+                                "emojiName",
+                            ),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static(
+                                        "Canonical name/identifier for the emoji (no spaces, e.g. 'POGGERS', 'Cinema')",
+                                    ),
+                                ),
+                                format: None,
+                                default: None,
+                                min_length: None,
+                                max_length: None,
+                                min_graphemes: None,
+                                max_graphemes: None,
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static("emojiUrl"),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static("URL to the emoji"),
+                                ),
+                                format: None,
+                                default: None,
+                                min_length: None,
+                                max_length: None,
+                                min_graphemes: None,
+                                max_graphemes: None,
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static("expires"),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static(
+                                        "Optional expiration timestamp",
+                                    ),
+                                ),
+                                format: Some(
+                                    ::jacquard_lexicon::lexicon::LexStringFormat::Datetime,
+                                ),
+                                default: None,
+                                min_length: None,
+                                max_length: None,
+                                min_graphemes: None,
+                                max_graphemes: None,
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static("handle"),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static("The user's handle"),
+                                ),
+                                format: Some(
+                                    ::jacquard_lexicon::lexicon::LexStringFormat::Handle,
+                                ),
+                                default: None,
+                                min_length: None,
+                                max_length: None,
+                                min_graphemes: None,
+                                max_graphemes: None,
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static("rkey"),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static("The record key"),
+                                ),
+                                format: None,
+                                default: None,
+                                min_length: None,
+                                max_length: None,
+                                min_graphemes: None,
+                                max_graphemes: None,
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static("title"),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static(
+                                        "Optional status text title",
+                                    ),
+                                ),
+                                format: None,
+                                default: None,
+                                min_length: None,
+                                max_length: Some(2560usize),
+                                min_graphemes: None,
+                                max_graphemes: Some(256usize),
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map
+                    },
+                }),
+            );
+            map
+        },
+    }
+}
+
+impl<'a> ::jacquard_lexicon::schema::LexiconSchema for StatusView<'a> {
+    fn nsid() -> &'static str {
+        "vg.nat.istat.status.listStatuses"
+    }
+    fn def_name() -> &'static str {
+        "statusView"
+    }
+    fn lexicon_doc() -> ::jacquard_lexicon::lexicon::LexiconDoc<'static> {
+        lexicon_doc_vg_nat_istat_status_listStatuses()
+    }
+    fn validate(
+        &self,
+    ) -> ::std::result::Result<(), ::jacquard_lexicon::validation::ConstraintError> {
+        if let Some(ref value) = self.description {
+            #[allow(unused_comparisons)]
+            if <str>::len(value.as_ref()) > 20480usize {
+                return Err(::jacquard_lexicon::validation::ConstraintError::MaxLength {
+                    path: ::jacquard_lexicon::validation::ValidationPath::from_field(
+                        "description",
+                    ),
+                    max: 20480usize,
+                    actual: <str>::len(value.as_ref()),
+                });
+            }
+        }
+        if let Some(ref value) = self.description {
+            {
+                let count = ::unicode_segmentation::UnicodeSegmentation::graphemes(
+                        value.as_ref(),
+                        true,
+                    )
+                    .count();
+                if count > 2048usize {
+                    return Err(::jacquard_lexicon::validation::ConstraintError::MaxGraphemes {
+                        path: ::jacquard_lexicon::validation::ValidationPath::from_field(
+                            "description",
+                        ),
+                        max: 2048usize,
+                        actual: count,
+                    });
+                }
+            }
+        }
+        if let Some(ref value) = self.display_name {
+            #[allow(unused_comparisons)]
+            if <str>::len(value.as_ref()) > 640usize {
+                return Err(::jacquard_lexicon::validation::ConstraintError::MaxLength {
+                    path: ::jacquard_lexicon::validation::ValidationPath::from_field(
+                        "display_name",
+                    ),
+                    max: 640usize,
+                    actual: <str>::len(value.as_ref()),
+                });
+            }
+        }
+        if let Some(ref value) = self.display_name {
+            {
+                let count = ::unicode_segmentation::UnicodeSegmentation::graphemes(
+                        value.as_ref(),
+                        true,
+                    )
+                    .count();
+                if count > 64usize {
+                    return Err(::jacquard_lexicon::validation::ConstraintError::MaxGraphemes {
+                        path: ::jacquard_lexicon::validation::ValidationPath::from_field(
+                            "display_name",
+                        ),
+                        max: 64usize,
+                        actual: count,
+                    });
+                }
+            }
+        }
+        if let Some(ref value) = self.title {
+            #[allow(unused_comparisons)]
+            if <str>::len(value.as_ref()) > 2560usize {
+                return Err(::jacquard_lexicon::validation::ConstraintError::MaxLength {
+                    path: ::jacquard_lexicon::validation::ValidationPath::from_field(
+                        "title",
+                    ),
+                    max: 2560usize,
+                    actual: <str>::len(value.as_ref()),
+                });
+            }
+        }
+        if let Some(ref value) = self.title {
+            {
+                let count = ::unicode_segmentation::UnicodeSegmentation::graphemes(
+                        value.as_ref(),
+                        true,
+                    )
+                    .count();
+                if count > 256usize {
+                    return Err(::jacquard_lexicon::validation::ConstraintError::MaxGraphemes {
+                        path: ::jacquard_lexicon::validation::ValidationPath::from_field(
+                            "title",
+                        ),
+                        max: 256usize,
+                        actual: count,
+                    });
+                }
+            }
+        }
+        Ok(())
+    }
 }

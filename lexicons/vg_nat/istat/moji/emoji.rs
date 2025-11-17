@@ -23,6 +23,9 @@ pub struct Emoji<'a> {
     pub alt_text: Option<jacquard_common::CowStr<'a>>,
     #[serde(borrow)]
     pub emoji: jacquard_common::types::blob::BlobRef<'a>,
+    /// Canonical name/identifier for the emoji (no spaces, e.g. 'POGGERS', 'Cinema')
+    #[serde(borrow)]
+    pub name: jacquard_common::CowStr<'a>,
 }
 
 pub mod emoji_state {
@@ -36,24 +39,36 @@ pub mod emoji_state {
     /// State trait tracking which required fields have been set
     pub trait State: sealed::Sealed {
         type Emoji;
+        type Name;
     }
     /// Empty state - all required fields are unset
     pub struct Empty(());
     impl sealed::Sealed for Empty {}
     impl State for Empty {
         type Emoji = Unset;
+        type Name = Unset;
     }
     ///State transition - sets the `emoji` field to Set
     pub struct SetEmoji<S: State = Empty>(PhantomData<fn() -> S>);
     impl<S: State> sealed::Sealed for SetEmoji<S> {}
     impl<S: State> State for SetEmoji<S> {
         type Emoji = Set<members::emoji>;
+        type Name = S::Name;
+    }
+    ///State transition - sets the `name` field to Set
+    pub struct SetName<S: State = Empty>(PhantomData<fn() -> S>);
+    impl<S: State> sealed::Sealed for SetName<S> {}
+    impl<S: State> State for SetName<S> {
+        type Emoji = S::Emoji;
+        type Name = Set<members::name>;
     }
     /// Marker types for field names
     #[allow(non_camel_case_types)]
     pub mod members {
         ///Marker type for the `emoji` field
         pub struct emoji(());
+        ///Marker type for the `name` field
+        pub struct name(());
     }
 }
 
@@ -63,6 +78,7 @@ pub struct EmojiBuilder<'a, S: emoji_state::State> {
     __unsafe_private_named: (
         ::core::option::Option<jacquard_common::CowStr<'a>>,
         ::core::option::Option<jacquard_common::types::blob::BlobRef<'a>>,
+        ::core::option::Option<jacquard_common::CowStr<'a>>,
     ),
     _phantom: ::core::marker::PhantomData<&'a ()>,
 }
@@ -79,7 +95,7 @@ impl<'a> EmojiBuilder<'a, emoji_state::Empty> {
     pub fn new() -> Self {
         EmojiBuilder {
             _phantom_state: ::core::marker::PhantomData,
-            __unsafe_private_named: (None, None),
+            __unsafe_private_named: (None, None, None),
             _phantom: ::core::marker::PhantomData,
         }
     }
@@ -123,13 +139,34 @@ where
 impl<'a, S> EmojiBuilder<'a, S>
 where
     S: emoji_state::State,
+    S::Name: emoji_state::IsUnset,
+{
+    /// Set the `name` field (required)
+    pub fn name(
+        mut self,
+        value: impl Into<jacquard_common::CowStr<'a>>,
+    ) -> EmojiBuilder<'a, emoji_state::SetName<S>> {
+        self.__unsafe_private_named.2 = ::core::option::Option::Some(value.into());
+        EmojiBuilder {
+            _phantom_state: ::core::marker::PhantomData,
+            __unsafe_private_named: self.__unsafe_private_named,
+            _phantom: ::core::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, S> EmojiBuilder<'a, S>
+where
+    S: emoji_state::State,
     S::Emoji: emoji_state::IsSet,
+    S::Name: emoji_state::IsSet,
 {
     /// Build the final struct
     pub fn build(self) -> Emoji<'a> {
         Emoji {
             alt_text: self.__unsafe_private_named.0,
             emoji: self.__unsafe_private_named.1.unwrap(),
+            name: self.__unsafe_private_named.2.unwrap(),
             extra_data: Default::default(),
         }
     }
@@ -144,6 +181,7 @@ where
         Emoji {
             alt_text: self.__unsafe_private_named.0,
             emoji: self.__unsafe_private_named.1.unwrap(),
+            name: self.__unsafe_private_named.2.unwrap(),
             extra_data: Some(extra_data),
         }
     }
@@ -253,6 +291,19 @@ impl<'a> ::jacquard_lexicon::schema::LexiconSchema for Emoji<'a> {
                 }
             }
         }
+        {
+            let value = &self.name;
+            #[allow(unused_comparisons)]
+            if <str>::len(value.as_ref()) > 64usize {
+                return Err(::jacquard_lexicon::validation::ConstraintError::MaxLength {
+                    path: ::jacquard_lexicon::validation::ValidationPath::from_field(
+                        "name",
+                    ),
+                    max: 64usize,
+                    actual: <str>::len(value.as_ref()),
+                });
+            }
+        }
         Ok(())
     }
 }
@@ -276,7 +327,8 @@ fn lexicon_doc_vg_nat_istat_moji_emoji() -> ::jacquard_lexicon::lexicon::Lexicon
                         description: None,
                         required: Some(
                             vec![
-                                ::jacquard_common::smol_str::SmolStr::new_static("emoji")
+                                ::jacquard_common::smol_str::SmolStr::new_static("emoji"),
+                                ::jacquard_common::smol_str::SmolStr::new_static("name")
                             ],
                         ),
                         nullable: None,
@@ -308,6 +360,25 @@ fn lexicon_doc_vg_nat_istat_moji_emoji() -> ::jacquard_lexicon::lexicon::Lexicon
                                     description: None,
                                     accept: None,
                                     max_size: None,
+                                }),
+                            );
+                            map.insert(
+                                ::jacquard_common::smol_str::SmolStr::new_static("name"),
+                                ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                    description: Some(
+                                        ::jacquard_common::CowStr::new_static(
+                                            "Canonical name/identifier for the emoji (no spaces, e.g. 'POGGERS', 'Cinema')",
+                                        ),
+                                    ),
+                                    format: None,
+                                    default: None,
+                                    min_length: None,
+                                    max_length: Some(64usize),
+                                    min_graphemes: None,
+                                    max_graphemes: None,
+                                    r#enum: None,
+                                    r#const: None,
+                                    known_values: None,
                                 }),
                             );
                             map

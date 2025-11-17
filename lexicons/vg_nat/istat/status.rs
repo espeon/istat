@@ -6,3 +6,4 @@
 pub mod get_status;
 pub mod list_statuses;
 pub mod list_user_statuses;
+pub mod record;

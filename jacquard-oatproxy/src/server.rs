@@ -1,7 +1,7 @@
 use crate::{
     config::ProxyConfig,
     error::{Error, Result},
-    store::{KeyStore, NonceStore, OAuthSessionStore},
+    store::{KeyStore, OAuthSessionStore},
     token::TokenManager,
 };
 use axum::{
@@ -21,28 +21,25 @@ use std::sync::Arc;
 /// Main OAuth proxy server that handles both downstream (client ↔ proxy)
 /// and upstream (proxy ↔ PDS) OAuth flows.
 #[derive(Clone)]
-pub struct OAuthProxyServer<S, K, N>
+pub struct OAuthProxyServer<S, K>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone,
     K: KeyStore + Clone,
-    N: NonceStore + Clone,
 {
     config: ProxyConfig,
     session_store: Arc<S>,
     key_store: Arc<K>,
-    nonce_store: Arc<N>,
     token_manager: Arc<TokenManager>,
     oauth_client: Arc<OAuthClient<JacquardResolver, S>>,
 }
 
-impl<S, K, N> OAuthProxyServer<S, K, N>
+impl<S, K> OAuthProxyServer<S, K>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone + 'static,
     K: KeyStore + Clone + 'static,
-    N: NonceStore + Clone + 'static,
 {
     /// Create a new OAuth proxy server builder.
-    pub fn builder() -> OAuthProxyServerBuilder<S, K, N> {
+    pub fn builder() -> OAuthProxyServerBuilder<S, K> {
         OAuthProxyServerBuilder::default()
     }
 
@@ -57,6 +54,8 @@ where
                 "/.well-known/oauth-protected-resource",
                 get(handle_protected_resource_metadata),
             )
+            .route("/oauth-client-metadata.json", get(handle_client_metadata))
+            .route("/oauth/jwks.json", get(handle_jwks))
             .route("/oauth/par", post(handle_par))
             .route("/oauth/authorize", get(handle_authorize))
             .route("/oauth/return", get(handle_return))
@@ -70,13 +69,12 @@ where
 // OAuth handler functions
 
 /// Handle OAuth authorization server metadata discovery
-async fn handle_oauth_metadata<S, K, N>(
-    State(server): State<OAuthProxyServer<S, K, N>>,
+async fn handle_oauth_metadata<S, K>(
+    State(server): State<OAuthProxyServer<S, K>>,
 ) -> Result<Response>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone + 'static,
     K: KeyStore + Clone + 'static,
-    N: NonceStore + Clone + 'static,
 {
     let base_url = server.config.host.as_str().trim_end_matches('/');
 
@@ -123,13 +121,12 @@ where
 }
 
 /// Handle OAuth protected resource metadata discovery
-async fn handle_protected_resource_metadata<S, K, N>(
-    State(server): State<OAuthProxyServer<S, K, N>>,
+async fn handle_protected_resource_metadata<S, K>(
+    State(server): State<OAuthProxyServer<S, K>>,
 ) -> Result<Response>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone + 'static,
     K: KeyStore + Clone + 'static,
-    N: NonceStore + Clone + 'static,
 {
     let base_url = server.config.host.as_str().trim_end_matches('/');
 
@@ -144,16 +141,138 @@ where
     Ok((StatusCode::OK, Json(metadata)).into_response())
 }
 
+/// ATProto OAuth Client Metadata response format
+#[derive(Serialize)]
+struct AtprotoClientMetadataResponse {
+    client_id: String,
+    application_type: String,
+    grant_types: Vec<String>,
+    scope: String,
+    response_types: Vec<String>,
+    redirect_uris: Vec<String>,
+    token_endpoint_auth_method: String,
+    token_endpoint_auth_signing_alg: String,
+    dpop_bound_access_tokens: bool,
+    jwks_uri: String,
+    client_name: String,
+    client_uri: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    logo_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tos_uri: Option<String>,
+}
+
+/// Handle client metadata document (for upstream PDS)
+async fn handle_client_metadata<S, K>(
+    State(server): State<OAuthProxyServer<S, K>>,
+) -> Result<Response>
+where
+    S: OAuthSessionStore + ClientAuthStore + Clone + 'static,
+    K: KeyStore + Clone + 'static,
+{
+    let metadata = &server.config.client_metadata;
+
+    // Convert scopes array to space-separated string
+    let scope_string = metadata
+        .scopes
+        .iter()
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    // Convert grant types to strings
+    let grant_types = metadata
+        .grant_types
+        .iter()
+        .map(|gt| match gt {
+            jacquard_oauth::atproto::GrantType::AuthorizationCode => "authorization_code",
+            jacquard_oauth::atproto::GrantType::RefreshToken => "refresh_token",
+            _ => "unknown",
+        })
+        .map(String::from)
+        .collect();
+
+    let response = AtprotoClientMetadataResponse {
+        client_id: metadata.client_id.to_string(),
+        application_type: "web".to_string(),
+        grant_types,
+        scope: scope_string,
+        response_types: vec!["code".to_string()],
+        redirect_uris: metadata
+            .redirect_uris
+            .iter()
+            .map(|u| u.to_string())
+            .collect(),
+        token_endpoint_auth_method: "private_key_jwt".to_string(),
+        token_endpoint_auth_signing_alg: "ES256".to_string(),
+        dpop_bound_access_tokens: true,
+        jwks_uri: metadata
+            .jwks_uri
+            .as_ref()
+            .map(|u| u.to_string())
+            .unwrap_or_default(),
+        client_name: metadata
+            .client_name
+            .as_ref()
+            .map(|s| s.to_string())
+            .unwrap_or_default(),
+        client_uri: metadata
+            .client_uri
+            .as_ref()
+            .map(|u| u.to_string())
+            .unwrap_or_default(),
+        logo_uri: metadata.logo_uri.as_ref().map(|u| u.to_string()),
+        tos_uri: metadata.tos_uri.as_ref().map(|u| u.to_string()),
+    };
+
+    Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+/// Handle JWKS endpoint (public keys for JWT verification)
+async fn handle_jwks<S, K>(State(server): State<OAuthProxyServer<S, K>>) -> Result<Response>
+where
+    S: OAuthSessionStore + ClientAuthStore + Clone + 'static,
+    K: KeyStore + Clone + 'static,
+{
+    use base64::Engine;
+    use p256::elliptic_curve::sec1::ToEncodedPoint;
+
+    let signing_key = server.key_store.get_signing_key().await?;
+    let verifying_key = signing_key.verifying_key();
+    let encoded_point = verifying_key.to_encoded_point(false);
+
+    let x = encoded_point
+        .x()
+        .ok_or_else(|| Error::InvalidRequest("missing x coordinate".to_string()))?;
+    let y = encoded_point
+        .y()
+        .ok_or_else(|| Error::InvalidRequest("missing y coordinate".to_string()))?;
+
+    // Construct JWKS manually - standard JSON format for JWK Set
+    let jwks = serde_json::json!({
+        "keys": [{
+            "kty": "EC",
+            "crv": "P-256",
+            "x": base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(x.as_slice()),
+            "y": base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(y.as_slice()),
+            "use": "sig",
+            "alg": "ES256",
+            "kid": "proxy-signing-key"
+        }]
+    });
+
+    Ok((StatusCode::OK, Json(jwks)).into_response())
+}
+
 /// Handle Pushed Authorization Request (PAR).
-async fn handle_par<S, K, N>(
-    State(server): State<OAuthProxyServer<S, K, N>>,
+async fn handle_par<S, K>(
+    State(server): State<OAuthProxyServer<S, K>>,
     headers: HeaderMap,
     body: String,
 ) -> Result<Response>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone + 'static,
     K: KeyStore + Clone + 'static,
-    N: NonceStore + Clone + 'static,
 {
     tracing::info!("handling PAR request");
 
@@ -205,9 +324,8 @@ where
 
     // Configure DPoP verification with HMAC-based nonces
     // The nonces are stateless and bound to the client
-    let hmac_secret = b"dpop-nonce-hmac-secret"; // TODO: load from config
     let hmac_config = dpop_verifier::HmacConfig::new(
-        hmac_secret,
+        &server.config.dpop_nonce_hmac_secret,
         300,  // 5 minute max age
         true, // bind to HTU/HTM
         true, // bind to JKT
@@ -215,7 +333,7 @@ where
     );
 
     // Create a simple in-memory replay store for this request
-    let mut replay_store = SimpleReplayStore::new(server.nonce_store.clone());
+    let mut replay_store = SimpleReplayStore::new(server.session_store.clone());
 
     // Verify the DPoP proof using builder pattern
     let verifier = dpop_verifier::DpopVerifier::new()
@@ -324,14 +442,13 @@ where
 }
 
 /// Handle authorization request - redirect to upstream PDS.
-async fn handle_authorize<S, K, N>(
-    State(server): State<OAuthProxyServer<S, K, N>>,
+async fn handle_authorize<S, K>(
+    State(server): State<OAuthProxyServer<S, K>>,
     Query(params): Query<AuthorizeParams>,
 ) -> Result<Response>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone + 'static,
     K: KeyStore + Clone + 'static,
-    N: NonceStore + Clone + 'static,
 {
     tracing::info!("handling authorize request");
 
@@ -403,6 +520,10 @@ where
         .unwrap_or_else(|| server.config.scope.clone());
 
     tracing::info!("got scopes {:?}", requested_scopes);
+    tracing::info!(
+        "starting upstream auth for user_identifier: {}",
+        user_identifier
+    );
 
     let auth_options = jacquard_oauth::types::AuthorizeOptions {
         scopes: requested_scopes,
@@ -410,11 +531,15 @@ where
         ..Default::default()
     };
 
+    tracing::info!("calling start_auth with options: state={}", proxy_state);
     let auth_url = server
         .oauth_client
         .start_auth(&user_identifier, auth_options)
         .await
-        .map_err(|e| Error::InvalidRequest(format!("failed to start auth: {}", e)))?;
+        .map_err(|e| {
+            tracing::error!("start_auth failed: {}", e);
+            Error::InvalidRequest(format!("failed to start auth: {}", e))
+        })?;
 
     // Store downstream client info by proxy_state
     // When callback returns with this state, we can retrieve the client info directly
@@ -440,14 +565,13 @@ where
 }
 
 /// Handle OAuth callback from upstream PDS.
-async fn handle_return<S, K, N>(
-    State(server): State<OAuthProxyServer<S, K, N>>,
+async fn handle_return<S, K>(
+    State(server): State<OAuthProxyServer<S, K>>,
     Query(params): Query<CallbackParams>,
 ) -> Result<Response>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone + 'static,
     K: KeyStore + Clone + 'static,
-    N: NonceStore + Clone + 'static,
 {
     tracing::info!("handling OAuth callback with params: {:?}", params);
 
@@ -565,15 +689,14 @@ where
 }
 
 /// Handle token request (exchange code for tokens or refresh tokens).
-async fn handle_token<S, K, N>(
-    State(server): State<OAuthProxyServer<S, K, N>>,
+async fn handle_token<S, K>(
+    State(server): State<OAuthProxyServer<S, K>>,
     headers: HeaderMap,
     body: String,
 ) -> Result<Response>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone + 'static,
     K: KeyStore + Clone + 'static,
-    N: NonceStore + Clone + 'static,
 {
     tracing::info!("handling token request");
 
@@ -812,15 +935,14 @@ where
 }
 
 /// Handle token revocation.
-async fn handle_revoke<S, K, N>(
-    State(server): State<OAuthProxyServer<S, K, N>>,
+async fn handle_revoke<S, K>(
+    State(server): State<OAuthProxyServer<S, K>>,
     headers: HeaderMap,
     _body: String,
 ) -> Result<Response>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone,
     K: KeyStore + Clone,
-    N: NonceStore + Clone,
 {
     tracing::info!("handling revoke request");
 
@@ -840,17 +962,16 @@ where
 }
 
 /// Proxy XRPC requests to the user's PDS with authenticated context.
-async fn handle_xrpc_proxy<S, K, N>(
-    State(server): State<OAuthProxyServer<S, K, N>>,
+async fn handle_xrpc_proxy<S, K>(
+    State(server): State<OAuthProxyServer<S, K>>,
     method: Method,
     uri: http::Uri,
     headers: HeaderMap,
-    body: String,
+    body: axum::body::Bytes,
 ) -> Result<Response>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone + 'static,
     K: KeyStore + Clone + 'static,
-    N: NonceStore + Clone + 'static,
 {
     tracing::info!("proxying XRPC request: {} {}", method, uri.path());
 
@@ -1055,39 +1176,34 @@ where
 }
 
 // Builder for OAuthProxyServer.
-pub struct OAuthProxyServerBuilder<S, K, N>
+pub struct OAuthProxyServerBuilder<S, K>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone,
     K: KeyStore + Clone,
-    N: NonceStore + Clone,
 {
     config: Option<ProxyConfig>,
     session_store: Option<Arc<S>>,
     key_store: Option<Arc<K>>,
-    nonce_store: Option<Arc<N>>,
 }
 
-impl<S, K, N> Default for OAuthProxyServerBuilder<S, K, N>
+impl<S, K> Default for OAuthProxyServerBuilder<S, K>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone,
     K: KeyStore + Clone,
-    N: NonceStore + Clone,
 {
     fn default() -> Self {
         Self {
             config: None,
             session_store: None,
             key_store: None,
-            nonce_store: None,
         }
     }
 }
 
-impl<S, K, N> OAuthProxyServerBuilder<S, K, N>
+impl<S, K> OAuthProxyServerBuilder<S, K>
 where
     S: OAuthSessionStore + ClientAuthStore + Clone + 'static,
     K: KeyStore + Clone + 'static,
-    N: NonceStore + Clone + 'static,
 {
     pub fn config(mut self, config: ProxyConfig) -> Self {
         self.config = Some(config);
@@ -1104,12 +1220,7 @@ where
         self
     }
 
-    pub fn nonce_store(mut self, store: Arc<N>) -> Self {
-        self.nonce_store = Some(store);
-        self
-    }
-
-    pub fn build(self) -> Result<OAuthProxyServer<S, K, N>> {
+    pub fn build(self) -> Result<OAuthProxyServer<S, K>> {
         let config = self
             .config
             .ok_or_else(|| Error::InvalidRequest("config required".to_string()))?;
@@ -1119,15 +1230,52 @@ where
         let key_store = self
             .key_store
             .ok_or_else(|| Error::InvalidRequest("key_store required".to_string()))?;
-        let nonce_store = self
-            .nonce_store
-            .ok_or_else(|| Error::InvalidRequest("nonce_store required".to_string()))?;
 
         let token_manager = Arc::new(TokenManager::new(config.host.to_string()));
 
+        // Get the signing key for client authentication
+        let signing_key = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(key_store.get_signing_key())
+        })?;
+
+        // Convert p256 signing key to jose_jwk::Jwk format
+        use base64::Engine;
+        use p256::elliptic_curve::sec1::ToEncodedPoint;
+
+        let verifying_key = signing_key.verifying_key();
+        let encoded_point = verifying_key.to_encoded_point(false);
+        let x = encoded_point
+            .x()
+            .ok_or_else(|| Error::InvalidRequest("missing x coordinate".to_string()))?;
+        let y = encoded_point
+            .y()
+            .ok_or_else(|| Error::InvalidRequest("missing y coordinate".to_string()))?;
+
+        // Get the private key (d parameter)
+        let d_bytes = signing_key.to_bytes();
+
+        let jwk = jose_jwk::Jwk {
+            key: jose_jwk::Key::Ec(jose_jwk::Ec {
+                crv: jose_jwk::EcCurves::P256,
+                x: jose_jwk::jose_b64::serde::Bytes::from(x.as_slice().to_vec()),
+                y: jose_jwk::jose_b64::serde::Bytes::from(y.as_slice().to_vec()),
+                d: Some(jose_jwk::jose_b64::serde::Secret::from(
+                    d_bytes.as_slice().to_vec(),
+                )),
+            }),
+            prm: jose_jwk::Parameters {
+                kid: Some("proxy-signing-key".into()),
+                ..Default::default()
+            },
+        };
+
+        // Create keyset with our signing key
+        let keyset = jacquard_oauth::keyset::Keyset::try_from(vec![jwk])
+            .map_err(|e| Error::InvalidRequest(format!("failed to create keyset: {}", e)))?;
+
         // Create OAuth client for upstream PDS authentication
         let client_data = ClientData {
-            keyset: None,
+            keyset: Some(keyset),
             config: config.client_metadata.clone(),
         };
         let oauth_client = Arc::new(OAuthClient::new((*session_store).clone(), client_data));
@@ -1136,7 +1284,6 @@ where
             config,
             session_store,
             key_store,
-            nonce_store,
             token_manager,
             oauth_client,
         })
@@ -1342,19 +1489,19 @@ fn generate_random_string(len: usize) -> String {
         .collect()
 }
 
-// Simple ReplayStore implementation that wraps our NonceStore
-struct SimpleReplayStore<N: NonceStore> {
-    nonce_store: Arc<N>,
+// Simple ReplayStore implementation that wraps our OAuthSessionStore
+struct SimpleReplayStore<S: OAuthSessionStore> {
+    session_store: Arc<S>,
 }
 
-impl<N: NonceStore> SimpleReplayStore<N> {
-    fn new(nonce_store: Arc<N>) -> Self {
-        Self { nonce_store }
+impl<S: OAuthSessionStore> SimpleReplayStore<S> {
+    fn new(session_store: Arc<S>) -> Self {
+        Self { session_store }
     }
 }
 
 #[async_trait::async_trait]
-impl<N: NonceStore + Send + Sync> dpop_verifier::ReplayStore for SimpleReplayStore<N> {
+impl<S: OAuthSessionStore + Send + Sync> dpop_verifier::ReplayStore for SimpleReplayStore<S> {
     async fn insert_once(
         &mut self,
         jti_hash: [u8; 32],
@@ -1365,7 +1512,7 @@ impl<N: NonceStore + Send + Sync> dpop_verifier::ReplayStore for SimpleReplaySto
 
         // Check if this JTI has been used before
         let is_new = self
-            .nonce_store
+            .session_store
             .check_and_consume_nonce(&jti_str)
             .await
             .map_err(|_| dpop_verifier::DpopError::Replay)?;

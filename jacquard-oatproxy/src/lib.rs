@@ -33,15 +33,21 @@
 //! # }
 //! ```
 
+pub mod auth;
 pub mod config;
 pub mod error;
+pub mod handlers;
 pub mod server;
 pub mod session;
 pub mod store;
 pub mod token;
 
+pub use auth::{ProxyJwtClaims, extract_bearer_token, validate_proxy_jwt};
 pub use config::ProxyConfig;
 pub use error::{Error, Result};
 pub use server::{OAuthProxyServer, OAuthProxyServerBuilder};
 pub use session::{OAuthSession, SessionState};
-pub use store::{KeyStore, NonceStore, OAuthSessionStore};
+pub use store::{KeyStore, OAuthSessionStore};
+
+#[cfg(feature = "axum")]
+pub use auth::axum_extractors::{AuthState, AuthenticatedClaims, AuthenticatedUser};

@@ -4,7 +4,7 @@ use jacquard_common::IntoStatic;
 use jacquard_oatproxy::{
     error::Result,
     session::{OAuthSession, SessionId},
-    store::{DownstreamClientInfo, KeyStore, NonceStore, OAuthSessionStore, PARData, PendingAuth},
+    store::{DownstreamClientInfo, KeyStore, OAuthSessionStore, PARData, PendingAuth},
 };
 use p256::ecdsa::SigningKey;
 use rand::rngs::OsRng;
@@ -21,7 +21,6 @@ pub struct MemoryStore {
     active_sessions: Arc<RwLock<HashMap<String, String>>>,          // did -> session_id
     session_dpop_keys: Arc<RwLock<HashMap<String, (String, jose_jwk::Jwk)>>>, // session_id -> (jkt, key)
     session_dpop_nonces: Arc<RwLock<HashMap<String, String>>>,                // session_id -> nonce
-    nonce_pads: Arc<RwLock<HashMap<String, String>>>, // session_id -> nonce_pad
     signing_key: SigningKey,
     used_nonces: Arc<RwLock<HashMap<String, DateTime<Utc>>>>,
     // jacquard-oauth storage
@@ -43,7 +42,6 @@ impl MemoryStore {
             active_sessions: Arc::new(RwLock::new(HashMap::new())),
             session_dpop_keys: Arc::new(RwLock::new(HashMap::new())),
             session_dpop_nonces: Arc::new(RwLock::new(HashMap::new())),
-            nonce_pads: Arc::new(RwLock::new(HashMap::new())),
             signing_key,
             used_nonces: Arc::new(RwLock::new(HashMap::new())),
             auth_requests: Arc::new(RwLock::new(HashMap::new())),
@@ -54,16 +52,6 @@ impl MemoryStore {
 
 #[async_trait]
 impl OAuthSessionStore for MemoryStore {
-    async fn create_session(&self, session: OAuthSession) -> Result<SessionId> {
-        let id = session.id.clone();
-        self.sessions.write().unwrap().insert(id.clone(), session);
-        Ok(id)
-    }
-
-    async fn get_session(&self, id: &SessionId) -> Result<Option<OAuthSession>> {
-        Ok(self.sessions.read().unwrap().get(id).cloned())
-    }
-
     async fn update_session(&self, session: &OAuthSession) -> Result<()> {
         self.sessions
             .write()
@@ -75,21 +63,6 @@ impl OAuthSessionStore for MemoryStore {
     async fn delete_session(&self, id: &SessionId) -> Result<()> {
         self.sessions.write().unwrap().remove(id);
         Ok(())
-    }
-
-    async fn get_by_request_uri(&self, _uri: &str) -> Result<Option<OAuthSession>> {
-        // Not used in this implementation
-        Ok(None)
-    }
-
-    async fn get_by_state(&self, state: &str) -> Result<Option<OAuthSession>> {
-        Ok(self
-            .sessions
-            .read()
-            .unwrap()
-            .values()
-            .find(|s| s.downstream_state.as_deref() == Some(state))
-            .cloned())
     }
 
     async fn get_by_dpop_jkt(&self, jkt: &str) -> Result<Option<OAuthSession>> {
@@ -223,57 +196,7 @@ impl OAuthSessionStore for MemoryStore {
             .get(session_id)
             .cloned())
     }
-}
 
-#[async_trait]
-impl KeyStore for MemoryStore {
-    async fn get_signing_key(&self) -> Result<SigningKey> {
-        Ok(self.signing_key.clone())
-    }
-
-    async fn create_dpop_key(&self) -> Result<jose_jwk::Jwk> {
-        // Generate a new P256 key for DPoP
-        let signing_key = SigningKey::random(&mut OsRng);
-        let verifying_key = signing_key.verifying_key();
-
-        // Convert to JWK
-        let jwk = jose_jwk::Jwk {
-            key: jose_jwk::Key::Ec(jose_jwk::Ec {
-                crv: jose_jwk::EcCurves::P256,
-                x: verifying_key
-                    .to_encoded_point(false)
-                    .x()
-                    .unwrap()
-                    .to_vec()
-                    .into(),
-                y: verifying_key
-                    .to_encoded_point(false)
-                    .y()
-                    .unwrap()
-                    .to_vec()
-                    .into(),
-                d: Some(signing_key.to_bytes().to_vec().into()),
-            }),
-            prm: jose_jwk::Parameters::default(),
-        };
-
-        Ok(jwk)
-    }
-
-    async fn get_dpop_key(&self, thumbprint: &str) -> Result<Option<jose_jwk::Jwk>> {
-        // Search through stored session keys
-        Ok(self
-            .session_dpop_keys
-            .read()
-            .unwrap()
-            .values()
-            .find(|(jkt, _)| jkt == thumbprint)
-            .map(|(_, key)| key.clone()))
-    }
-}
-
-#[async_trait]
-impl NonceStore for MemoryStore {
     async fn check_and_consume_nonce(&self, jti: &str) -> Result<bool> {
         let mut nonces = self.used_nonces.write().unwrap();
 
@@ -286,98 +209,23 @@ impl NonceStore for MemoryStore {
         nonces.insert(jti.to_string(), Utc::now());
         Ok(true)
     }
+}
 
-    async fn generate_nonce(&self, session_id: &str, nonce_pad: &str) -> Result<String> {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
+#[async_trait]
+impl KeyStore for MemoryStore {
+    async fn get_signing_key(&self) -> Result<SigningKey> {
+        Ok(self.signing_key.clone())
+    }
 
-        // Generate random bytes for the nonce
-        let nonce_bytes: [u8; 16] = rng.r#gen();
-
-        // XOR with nonce_pad bytes
-        let pad_bytes = hex::decode(nonce_pad).unwrap_or_else(|_| nonce_pad.as_bytes().to_vec());
-        let mut result = nonce_bytes.to_vec();
-
-        for (i, byte) in result.iter_mut().enumerate() {
-            if i < pad_bytes.len() {
-                *byte ^= pad_bytes[i];
-            }
-        }
-
-        // Store the nonce for this session
-        let nonce_hex = hex::encode(&result);
-        self.session_dpop_nonces
-            .write()
+    async fn get_dpop_key(&self, thumbprint: &str) -> Result<Option<jose_jwk::Jwk>> {
+        // Search through stored session keys
+        Ok(self
+            .session_dpop_keys
+            .read()
             .unwrap()
-            .insert(session_id.to_string(), nonce_hex.clone());
-
-        Ok(nonce_hex)
-    }
-
-    async fn store_nonce_pad(&self, session_id: &str, nonce_pad: &str) -> Result<()> {
-        self.nonce_pads
-            .write()
-            .unwrap()
-            .insert(session_id.to_string(), nonce_pad.to_string());
-        Ok(())
-    }
-
-    async fn get_nonce_pad(&self, session_id: &str) -> Result<Option<String>> {
-        Ok(self.nonce_pads.read().unwrap().get(session_id).cloned())
-    }
-
-    async fn verify_nonce(&self, session_id: &str, nonce: &str) -> Result<bool> {
-        // Get the nonce pad for this session
-        let nonce_pad = match self.nonce_pads.read().unwrap().get(session_id) {
-            Some(pad) => pad.clone(),
-            None => return Ok(false),
-        };
-
-        // Get the last nonce we sent
-        let last_nonce = match self.session_dpop_nonces.read().unwrap().get(session_id) {
-            Some(n) => n.clone(),
-            None => return Ok(false),
-        };
-
-        // The client should have XOR'd the nonce we sent with the nonce_pad
-        // So we XOR it again to get back the original random value
-        let nonce_bytes = match hex::decode(nonce) {
-            Ok(bytes) => bytes,
-            Err(_) => return Ok(false),
-        };
-
-        let pad_bytes = hex::decode(&nonce_pad).unwrap_or_else(|_| nonce_pad.as_bytes().to_vec());
-
-        let mut unxored = nonce_bytes.clone();
-        for (i, byte) in unxored.iter_mut().enumerate() {
-            if i < pad_bytes.len() {
-                *byte ^= pad_bytes[i];
-            }
-        }
-
-        // XOR the last nonce we sent to get its original value
-        let last_nonce_bytes = match hex::decode(&last_nonce) {
-            Ok(bytes) => bytes,
-            Err(_) => return Ok(false),
-        };
-
-        let mut last_unxored = last_nonce_bytes.clone();
-        for (i, byte) in last_unxored.iter_mut().enumerate() {
-            if i < pad_bytes.len() {
-                *byte ^= pad_bytes[i];
-            }
-        }
-
-        // They should not match (client must have used a fresh nonce)
-        Ok(unxored != last_unxored)
-    }
-
-    async fn cleanup_expired(&self, before: DateTime<Utc>) -> Result<()> {
-        self.used_nonces
-            .write()
-            .unwrap()
-            .retain(|_, timestamp| *timestamp > before);
-        Ok(())
+            .values()
+            .find(|(jkt, _)| jkt == thumbprint)
+            .map(|(_, key)| key.clone()))
     }
 }
 

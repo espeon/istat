@@ -11,8 +11,8 @@
         "properties": {
           "emoji": {
             "type": "ref",
-            "description": "The emoji representing the status",
-            "format": "com.atproto.repo.strongref"
+            "ref": "com.atproto.repo.strongRef",
+            "description": "The emoji representing the status"
           },
           "title": {
             "type": "string",

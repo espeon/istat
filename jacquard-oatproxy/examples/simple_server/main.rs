@@ -41,7 +41,6 @@ async fn main() -> miette::Result<()> {
         .config(config)
         .session_store(store.clone())
         .key_store(store.clone())
-        .nonce_store(store)
         .build()
         .into_diagnostic()
         .wrap_err("failed to build OAuth proxy server")?;
