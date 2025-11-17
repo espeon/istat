@@ -1,0 +1,14 @@
+{
+  "client_id": "https://frank-appearance-litigation-ancient.trycloudflare.com/client-metadata.json",
+  "client_name": "iStat Web Client",
+  "client_uri": "https://frank-appearance-litigation-ancient.trycloudflare.com",
+  "redirect_uris": [
+    "https://frank-appearance-litigation-ancient.trycloudflare.com/oauth/callback"
+  ],
+  "scope": "atproto transition:generic",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "application_type": "web",
+  "token_endpoint_auth_method": "none",
+  "dpop_bound_access_tokens": true
+}

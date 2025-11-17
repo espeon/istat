@@ -1,0 +1,46 @@
+{
+  "name": "frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "vite build && tsc",
+    "serve": "vite preview",
+    "test": "vitest run",
+    "codegen": "lex-cli generate -c ./lex.config.js"
+  },
+  "dependencies": {
+    "@atcute/atproto": "^3.1.9",
+    "@atcute/bluesky": "^3.2.10",
+    "@atcute/client": "^4.0.5",
+    "@atcute/identity-resolver": "^1.1.4",
+    "@atcute/lexicons": "^1.2.2",
+    "@atcute/oauth-browser-client": "^2.0.1",
+    "@atcute/tid": "^1.0.3",
+    "@tailwindcss/vite": "^4.0.6",
+    "@tanstack/react-devtools": "^0.7.0",
+    "@tanstack/react-router": "^1.132.0",
+    "@tanstack/react-router-devtools": "^1.132.0",
+    "@tanstack/router-plugin": "^1.132.0",
+    "lucide-react": "^0.545.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.0.6"
+  },
+  "devDependencies": {
+    "@atcute/lex-cli": "^2.3.2",
+    "@tanstack/devtools-vite": "^0.3.11",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.2.0",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "jsdom": "^27.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^7.1.7",
+    "vitest": "^3.0.5",
+    "web-vitals": "^5.1.0"
+  },
+  "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
+}

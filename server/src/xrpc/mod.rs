@@ -336,7 +336,7 @@ pub async fn handle_list_user_statuses(
         LEFT JOIN profiles p ON s.did = p.did
         LEFT JOIN emojis e ON s.emoji_ref = 'at://' || e.at
         WHERE s.did = ?
-          AND (s.expires IS NULL OR s.expires > datetime('now'))
+          AND (s.expires IS NULL OR datetime(s.expires) > datetime('now'))
         ORDER BY s.created_at DESC
         LIMIT ?
         "#,
@@ -476,7 +476,7 @@ pub async fn handle_list_statuses(
         FROM statuses s
         LEFT JOIN profiles p ON s.did = p.did
         LEFT JOIN emojis e ON s.emoji_ref = 'at://' || e.at
-        WHERE (s.expires IS NULL OR s.expires > datetime('now'))
+        WHERE (s.expires IS NULL OR datetime(s.expires) > datetime('now'))
         ORDER BY s.created_at DESC
         LIMIT ?
         "#,

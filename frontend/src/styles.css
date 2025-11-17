@@ -1,0 +1,198 @@
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Momo+Signature&family=TASA+Orbiter:wght@400..800&display=swap");
+
+@theme {
+    /* Font families */
+    --font-sans: "TASA Orbiter", -apple-system, sans-serif;
+    --font-serif: "EB Garamond", Georgia, serif;
+    --font-cursive: "Momo Signature", cursive;
+
+    /* Radius */
+    --radius: 0rem;
+}
+
+/* Light theme (default) */
+:root,
+[data-theme="light"] {
+    /* Colors */
+    --background: 250 248 248;
+    --foreground: 26 26 26;
+
+    --card: 255 255 255;
+    --card-foreground: 26 26 26;
+
+    --popover: 255 255 255;
+    --popover-foreground: 26 26 26;
+
+    --primary: 44 44 44;
+    --primary-foreground: 255 255 255;
+
+    --secondary: 229 229 224;
+    --secondary-foreground: 26 26 26;
+
+    --muted: 229 229 224;
+    --muted-foreground: 107 107 107;
+
+    --accent: 139 115 85;
+    --accent-foreground: 255 255 255;
+
+    --destructive: 220 38 38;
+    --destructive-foreground: 255 255 255;
+
+    --border: 229 229 224;
+    --input: 229 229 224;
+    --ring: 44 44 44;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+    /* Colors */
+    --background: 15 15 15;
+    --foreground: 232 232 232;
+
+    --card: 26 26 26;
+    --card-foreground: 232 232 232;
+
+    --popover: 26 26 26;
+    --popover-foreground: 232 232 232;
+
+    --primary: 232 232 232;
+    --primary-foreground: 15 15 15;
+
+    --secondary: 42 42 42;
+    --secondary-foreground: 232 232 232;
+
+    --muted: 42 42 42;
+    --muted-foreground: 160 160 160;
+
+    --accent: 184 148 122;
+    --accent-foreground: 15 15 15;
+
+    --destructive: 239 68 68;
+    --destructive-foreground: 15 15 15;
+
+    --border: 42 42 42;
+    --input: 42 42 42;
+    --ring: 232 232 232;
+}
+
+* {
+    box-sizing: border-box;
+
+    /*transition:
+        background-color 0.3s ease,
+        color 0.3s ease;*/
+}
+
+html {
+    @apply m-0;
+    font-family:
+        "TASA Orbiter",
+        -apple-system,
+        sans-serif;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: rgb(var(--background));
+    color: rgb(var(--foreground));
+    line-height: 1.5;
+}
+
+.label {
+    font-family: "EB Garamond", Georgia, serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* loading spinner */
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 2px solid rgb(var(--border));
+    border-top-color: rgb(var(--primary));
+    border-radius: 50%;
+    animation: spin 1.2s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* status card animation */
+.status-card {
+    animation: fadeInUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    transition: all 0.2s ease;
+}
+
+.status-card:hover {
+    transform: translateY(-1px);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgb(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgb(var(--border));
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--muted-foreground));
+}
+
+/* selection */
+::selection {
+    background: rgb(var(--accent));
+    color: rgb(var(--accent-foreground));
+}
+
+/* focus styles */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+    outline: 2px solid rgb(var(--ring));
+    outline-offset: 2px;
+}
+
+/* utility: backdrop blur */
+.backdrop-blur-xl {
+    backdrop-filter: blur(16px);
+}
+
+/* theme toggle button */
+.theme-toggle {
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgb(var(--border));
+    background: rgb(var(--card));
+    color: rgb(var(--foreground));
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.theme-toggle:hover {
+    border-color: rgb(var(--primary));
+}
