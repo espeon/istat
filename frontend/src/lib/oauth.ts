@@ -16,7 +16,7 @@ let isConfigured = false;
 
 // OAuth proxy URL - change this to point to your proxy server
 const OAUTH_PROXY_URL =
-  "https://frank-appearance-litigation-ancient.trycloudflare.com";
+  "https://creator-elementary-fate-fair.trycloudflare.com";
 
 export function initOAuth() {
   if (isConfigured) {

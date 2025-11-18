@@ -29,26 +29,33 @@ export function QtProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     initOAuth();
+    console.log("oauth initted");
     attemptResumeSession();
+    console.log("session resumed?");
   }, []);
 
   // periodically refresh session to prevent token expiry
   useEffect(() => {
+    console.log("setting up session refresh effect");
     if (!currentAgent) return;
 
     const interval = setInterval(
       async () => {
         try {
+          console.log("attempting session refresh");
           await currentAgent.getSession();
         } catch (err) {
           console.error("session refresh failed, logging out:", err);
           await logout();
         }
       },
-      15 * 60 * 1000,
-    ); // refresh every 15 minutes
+      12 * 60 * 60 * 1000,
+    );
 
-    return () => clearInterval(interval);
+    return () => {
+      console.log("cleaning up session refresher");
+      clearInterval(interval);
+    };
   }, [currentAgent]);
 
   const attemptResumeSession = async () => {
@@ -56,7 +63,7 @@ export function QtProvider({ children }: { children: React.ReactNode }) {
     if (currentDid) {
       try {
         const session = await getSession(currentDid as any, {
-          allowStale: true,
+          allowStale: false,
         });
         if (session) {
           const agent = new OAuthUserAgent(session);

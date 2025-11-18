@@ -21,6 +21,9 @@ pub struct EmojiView<'a> {
     #[serde(skip_serializing_if = "std::option::Option::is_none")]
     #[serde(borrow)]
     pub alt_text: Option<jacquard_common::CowStr<'a>>,
+    /// CID of the emoji blob
+    #[serde(borrow)]
+    pub blob_cid: jacquard_common::CowStr<'a>,
     /// DID of the user who created this emoji
     #[serde(borrow)]
     pub created_by: jacquard_common::types::string::Did<'a>,
@@ -53,6 +56,7 @@ pub mod emoji_view_state {
         type Name;
         type Url;
         type CreatedBy;
+        type BlobCid;
     }
     /// Empty state - all required fields are unset
     pub struct Empty(());
@@ -62,6 +66,7 @@ pub mod emoji_view_state {
         type Name = Unset;
         type Url = Unset;
         type CreatedBy = Unset;
+        type BlobCid = Unset;
     }
     ///State transition - sets the `uri` field to Set
     pub struct SetUri<S: State = Empty>(PhantomData<fn() -> S>);
@@ -71,6 +76,7 @@ pub mod emoji_view_state {
         type Name = S::Name;
         type Url = S::Url;
         type CreatedBy = S::CreatedBy;
+        type BlobCid = S::BlobCid;
     }
     ///State transition - sets the `name` field to Set
     pub struct SetName<S: State = Empty>(PhantomData<fn() -> S>);
@@ -80,6 +86,7 @@ pub mod emoji_view_state {
         type Name = Set<members::name>;
         type Url = S::Url;
         type CreatedBy = S::CreatedBy;
+        type BlobCid = S::BlobCid;
     }
     ///State transition - sets the `url` field to Set
     pub struct SetUrl<S: State = Empty>(PhantomData<fn() -> S>);
@@ -89,6 +96,7 @@ pub mod emoji_view_state {
         type Name = S::Name;
         type Url = Set<members::url>;
         type CreatedBy = S::CreatedBy;
+        type BlobCid = S::BlobCid;
     }
     ///State transition - sets the `created_by` field to Set
     pub struct SetCreatedBy<S: State = Empty>(PhantomData<fn() -> S>);
@@ -98,6 +106,17 @@ pub mod emoji_view_state {
         type Name = S::Name;
         type Url = S::Url;
         type CreatedBy = Set<members::created_by>;
+        type BlobCid = S::BlobCid;
+    }
+    ///State transition - sets the `blob_cid` field to Set
+    pub struct SetBlobCid<S: State = Empty>(PhantomData<fn() -> S>);
+    impl<S: State> sealed::Sealed for SetBlobCid<S> {}
+    impl<S: State> State for SetBlobCid<S> {
+        type Uri = S::Uri;
+        type Name = S::Name;
+        type Url = S::Url;
+        type CreatedBy = S::CreatedBy;
+        type BlobCid = Set<members::blob_cid>;
     }
     /// Marker types for field names
     #[allow(non_camel_case_types)]
@@ -110,6 +129,8 @@ pub mod emoji_view_state {
         pub struct url(());
         ///Marker type for the `created_by` field
         pub struct created_by(());
+        ///Marker type for the `blob_cid` field
+        pub struct blob_cid(());
     }
 }
 
@@ -117,6 +138,7 @@ pub mod emoji_view_state {
 pub struct EmojiViewBuilder<'a, S: emoji_view_state::State> {
     _phantom_state: ::core::marker::PhantomData<fn() -> S>,
     __unsafe_private_named: (
+        ::core::option::Option<jacquard_common::CowStr<'a>>,
         ::core::option::Option<jacquard_common::CowStr<'a>>,
         ::core::option::Option<jacquard_common::types::string::Did<'a>>,
         ::core::option::Option<jacquard_common::types::string::Handle<'a>>,
@@ -139,7 +161,7 @@ impl<'a> EmojiViewBuilder<'a, emoji_view_state::Empty> {
     pub fn new() -> Self {
         EmojiViewBuilder {
             _phantom_state: ::core::marker::PhantomData,
-            __unsafe_private_named: (None, None, None, None, None, None),
+            __unsafe_private_named: (None, None, None, None, None, None, None),
             _phantom: ::core::marker::PhantomData,
         }
     }
@@ -164,6 +186,25 @@ impl<'a, S: emoji_view_state::State> EmojiViewBuilder<'a, S> {
 impl<'a, S> EmojiViewBuilder<'a, S>
 where
     S: emoji_view_state::State,
+    S::BlobCid: emoji_view_state::IsUnset,
+{
+    /// Set the `blobCid` field (required)
+    pub fn blob_cid(
+        mut self,
+        value: impl Into<jacquard_common::CowStr<'a>>,
+    ) -> EmojiViewBuilder<'a, emoji_view_state::SetBlobCid<S>> {
+        self.__unsafe_private_named.1 = ::core::option::Option::Some(value.into());
+        EmojiViewBuilder {
+            _phantom_state: ::core::marker::PhantomData,
+            __unsafe_private_named: self.__unsafe_private_named,
+            _phantom: ::core::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, S> EmojiViewBuilder<'a, S>
+where
+    S: emoji_view_state::State,
     S::CreatedBy: emoji_view_state::IsUnset,
 {
     /// Set the `createdBy` field (required)
@@ -171,7 +212,7 @@ where
         mut self,
         value: impl Into<jacquard_common::types::string::Did<'a>>,
     ) -> EmojiViewBuilder<'a, emoji_view_state::SetCreatedBy<S>> {
-        self.__unsafe_private_named.1 = ::core::option::Option::Some(value.into());
+        self.__unsafe_private_named.2 = ::core::option::Option::Some(value.into());
         EmojiViewBuilder {
             _phantom_state: ::core::marker::PhantomData,
             __unsafe_private_named: self.__unsafe_private_named,
@@ -186,7 +227,7 @@ impl<'a, S: emoji_view_state::State> EmojiViewBuilder<'a, S> {
         mut self,
         value: impl Into<Option<jacquard_common::types::string::Handle<'a>>>,
     ) -> Self {
-        self.__unsafe_private_named.2 = value.into();
+        self.__unsafe_private_named.3 = value.into();
         self
     }
     /// Set the `createdByHandle` field to an Option value (optional)
@@ -194,7 +235,7 @@ impl<'a, S: emoji_view_state::State> EmojiViewBuilder<'a, S> {
         mut self,
         value: Option<jacquard_common::types::string::Handle<'a>>,
     ) -> Self {
-        self.__unsafe_private_named.2 = value;
+        self.__unsafe_private_named.3 = value;
         self
     }
 }
@@ -209,7 +250,7 @@ where
         mut self,
         value: impl Into<jacquard_common::CowStr<'a>>,
     ) -> EmojiViewBuilder<'a, emoji_view_state::SetName<S>> {
-        self.__unsafe_private_named.3 = ::core::option::Option::Some(value.into());
+        self.__unsafe_private_named.4 = ::core::option::Option::Some(value.into());
         EmojiViewBuilder {
             _phantom_state: ::core::marker::PhantomData,
             __unsafe_private_named: self.__unsafe_private_named,
@@ -228,7 +269,7 @@ where
         mut self,
         value: impl Into<jacquard_common::types::string::AtUri<'a>>,
     ) -> EmojiViewBuilder<'a, emoji_view_state::SetUri<S>> {
-        self.__unsafe_private_named.4 = ::core::option::Option::Some(value.into());
+        self.__unsafe_private_named.5 = ::core::option::Option::Some(value.into());
         EmojiViewBuilder {
             _phantom_state: ::core::marker::PhantomData,
             __unsafe_private_named: self.__unsafe_private_named,
@@ -247,7 +288,7 @@ where
         mut self,
         value: impl Into<jacquard_common::CowStr<'a>>,
     ) -> EmojiViewBuilder<'a, emoji_view_state::SetUrl<S>> {
-        self.__unsafe_private_named.5 = ::core::option::Option::Some(value.into());
+        self.__unsafe_private_named.6 = ::core::option::Option::Some(value.into());
         EmojiViewBuilder {
             _phantom_state: ::core::marker::PhantomData,
             __unsafe_private_named: self.__unsafe_private_named,
@@ -263,16 +304,18 @@ where
     S::Name: emoji_view_state::IsSet,
     S::Url: emoji_view_state::IsSet,
     S::CreatedBy: emoji_view_state::IsSet,
+    S::BlobCid: emoji_view_state::IsSet,
 {
     /// Build the final struct
     pub fn build(self) -> EmojiView<'a> {
         EmojiView {
             alt_text: self.__unsafe_private_named.0,
-            created_by: self.__unsafe_private_named.1.unwrap(),
-            created_by_handle: self.__unsafe_private_named.2,
-            name: self.__unsafe_private_named.3.unwrap(),
-            uri: self.__unsafe_private_named.4.unwrap(),
-            url: self.__unsafe_private_named.5.unwrap(),
+            blob_cid: self.__unsafe_private_named.1.unwrap(),
+            created_by: self.__unsafe_private_named.2.unwrap(),
+            created_by_handle: self.__unsafe_private_named.3,
+            name: self.__unsafe_private_named.4.unwrap(),
+            uri: self.__unsafe_private_named.5.unwrap(),
+            url: self.__unsafe_private_named.6.unwrap(),
             extra_data: Default::default(),
         }
     }
@@ -286,11 +329,12 @@ where
     ) -> EmojiView<'a> {
         EmojiView {
             alt_text: self.__unsafe_private_named.0,
-            created_by: self.__unsafe_private_named.1.unwrap(),
-            created_by_handle: self.__unsafe_private_named.2,
-            name: self.__unsafe_private_named.3.unwrap(),
-            uri: self.__unsafe_private_named.4.unwrap(),
-            url: self.__unsafe_private_named.5.unwrap(),
+            blob_cid: self.__unsafe_private_named.1.unwrap(),
+            created_by: self.__unsafe_private_named.2.unwrap(),
+            created_by_handle: self.__unsafe_private_named.3,
+            name: self.__unsafe_private_named.4.unwrap(),
+            uri: self.__unsafe_private_named.5.unwrap(),
+            url: self.__unsafe_private_named.6.unwrap(),
             extra_data: Some(extra_data),
         }
     }
@@ -315,7 +359,8 @@ fn lexicon_doc_vg_nat_istat_moji_searchEmoji() -> ::jacquard_lexicon::lexicon::L
                             ::jacquard_common::smol_str::SmolStr::new_static("uri"),
                             ::jacquard_common::smol_str::SmolStr::new_static("name"),
                             ::jacquard_common::smol_str::SmolStr::new_static("url"),
-                            ::jacquard_common::smol_str::SmolStr::new_static("createdBy")
+                            ::jacquard_common::smol_str::SmolStr::new_static("createdBy"),
+                            ::jacquard_common::smol_str::SmolStr::new_static("blobCid")
                         ],
                     ),
                     nullable: None,
@@ -328,6 +373,25 @@ fn lexicon_doc_vg_nat_istat_moji_searchEmoji() -> ::jacquard_lexicon::lexicon::L
                                 description: Some(
                                     ::jacquard_common::CowStr::new_static(
                                         "Alt text description",
+                                    ),
+                                ),
+                                format: None,
+                                default: None,
+                                min_length: None,
+                                max_length: None,
+                                min_graphemes: None,
+                                max_graphemes: None,
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static("blobCid"),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static(
+                                        "CID of the emoji blob",
                                     ),
                                 ),
                                 format: None,

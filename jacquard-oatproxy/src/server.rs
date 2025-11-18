@@ -601,11 +601,20 @@ where
         iss: params.iss.as_deref().map(|s| s.into()),
     };
 
+    tracing::info!("calling oauth_client.callback with code and state");
+    tracing::info!(
+        "client_id from config: {}",
+        server.config.client_metadata.client_id
+    );
+
     let oauth_session = server
         .oauth_client
         .callback(callback_params)
         .await
-        .map_err(|e| Error::InvalidRequest(format!("failed to exchange code: {}", e)))?;
+        .map_err(|e| {
+            tracing::error!("callback failed with error: {}", e);
+            Error::InvalidRequest(format!("failed to exchange code: {}", e))
+        })?;
 
     // Extract session data
     let session_data = oauth_session.data.read().await;
@@ -779,7 +788,7 @@ where
                     &pending_auth.account_did,
                     &dpop_jkt,
                     &scope_str,
-                    3600, // 1 hour expiry
+                    server.config.downstream_token_expiry_seconds,
                     &*server.key_store,
                 )
                 .await?;
@@ -826,7 +835,7 @@ where
             let response = TokenResponse {
                 access_token,
                 token_type: "DPoP".to_string(),
-                expires_in: 3600,
+                expires_in: server.config.downstream_token_expiry_seconds as u64,
                 refresh_token: Some(downstream_refresh_token),
                 scope: scope_str,
                 sub: pending_auth.account_did.clone(),
@@ -885,7 +894,7 @@ where
                     &account_did,
                     &dpop_jkt,
                     &scope_str,
-                    3600,
+                    server.config.downstream_token_expiry_seconds,
                     &*server.key_store,
                 )
                 .await?;
@@ -922,7 +931,7 @@ where
             let response = TokenResponse {
                 access_token,
                 token_type: "DPoP".to_string(),
-                expires_in: 3600,
+                expires_in: server.config.downstream_token_expiry_seconds as u64,
                 refresh_token: Some(new_downstream_refresh),
                 scope: scope_str,
                 sub: account_did,
@@ -1027,6 +1036,7 @@ where
 
     // 4. Build upstream URL
     let path = uri.path_and_query().map(|pq| pq.as_str()).unwrap_or("");
+    tracing::info!("{:?}", &upstream_session_data);
     let host_url = upstream_session_data
         .host_url
         .as_str()
@@ -1239,9 +1249,6 @@ where
         })?;
 
         // Convert p256 signing key to jose_jwk::Jwk format
-        use base64::Engine;
-        use p256::elliptic_curve::sec1::ToEncodedPoint;
-
         let verifying_key = signing_key.verifying_key();
         let encoded_point = verifying_key.to_encoded_point(false);
         let x = encoded_point
@@ -1257,10 +1264,10 @@ where
         let jwk = jose_jwk::Jwk {
             key: jose_jwk::Key::Ec(jose_jwk::Ec {
                 crv: jose_jwk::EcCurves::P256,
-                x: jose_jwk::jose_b64::serde::Bytes::from(x.as_slice().to_vec()),
-                y: jose_jwk::jose_b64::serde::Bytes::from(y.as_slice().to_vec()),
+                x: jose_jwk::jose_b64::serde::Bytes::from(x.iter().as_slice().to_vec()),
+                y: jose_jwk::jose_b64::serde::Bytes::from(y.iter().as_slice().to_vec()),
                 d: Some(jose_jwk::jose_b64::serde::Secret::from(
-                    d_bytes.as_slice().to_vec(),
+                    d_bytes.iter().as_slice().to_vec(),
                 )),
             }),
             prm: jose_jwk::Parameters {

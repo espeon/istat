@@ -1,9 +1,9 @@
 {
-  "client_id": "https://frank-appearance-litigation-ancient.trycloudflare.com/client-metadata.json",
+  "client_id": "https://creator-elementary-fate-fair.trycloudflare.com/client-metadata.json",
   "client_name": "iStat Web Client",
-  "client_uri": "https://frank-appearance-litigation-ancient.trycloudflare.com",
+  "client_uri": "https://creator-elementary-fate-fair.trycloudflare.com",
   "redirect_uris": [
-    "https://frank-appearance-litigation-ancient.trycloudflare.com/oauth/callback"
+    "https://creator-elementary-fate-fair.trycloudflare.com/oauth/callback"
   ],
   "scope": "atproto transition:generic",
   "grant_types": ["authorization_code", "refresh_token"],

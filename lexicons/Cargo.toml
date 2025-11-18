@@ -7,9 +7,9 @@ edition = "2024"
 path = "lib.rs"
 
 [dependencies]
-jacquard-common = { path = "../../jacquard/crates/jacquard-common" }
-jacquard-derive = { path = "../../jacquard/crates/jacquard-derive" }
-jacquard-lexicon = { path = "../../jacquard/crates/jacquard-lexicon" }
+jacquard-common = { workspace = true }
+jacquard-derive = { workspace = true }
+jacquard-lexicon = { workspace = true }
 miette = "7.6.0"
 rustversion = "1.0"
 serde = { version = "1.0", features = ["derive"] }

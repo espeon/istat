@@ -286,6 +286,7 @@ pub async fn handle_search_emoji(
                 .url(url)
                 .created_by(DidType::from_str(&did).ok()?)
                 .maybe_created_by_handle(handle.and_then(|h| Handle::from_str(&h).ok()))
+                .blob_cid(blob_cid)
                 .build();
 
             eprintln!("successfully built emoji view");

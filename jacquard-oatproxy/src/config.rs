@@ -19,6 +19,9 @@ pub struct ProxyConfig {
 
     /// HMAC secret for DPoP nonce generation (32+ bytes recommended)
     pub dpop_nonce_hmac_secret: Vec<u8>,
+
+    /// Downstream token expiry in seconds (default: 3600 = 1 hour)
+    pub downstream_token_expiry_seconds: i64,
 }
 
 impl ProxyConfig {
@@ -77,6 +80,7 @@ impl ProxyConfig {
             client_metadata,
             default_pds: Url::parse("https://public.api.bsky.app").expect("valid url"),
             dpop_nonce_hmac_secret: b"insecure-default-dpop-nonce-secret".to_vec(),
+            downstream_token_expiry_seconds: 3600, // 1 hour default
         }
     }
 
@@ -95,6 +99,48 @@ impl ProxyConfig {
     /// Set HMAC secret for DPoP nonce generation
     pub fn with_dpop_nonce_secret(mut self, secret: Vec<u8>) -> Self {
         self.dpop_nonce_hmac_secret = secret;
+        self
+    }
+
+    /// Set downstream token expiry in seconds
+    pub fn with_downstream_token_expiry(mut self, seconds: i64) -> Self {
+        self.downstream_token_expiry_seconds = seconds;
+        self
+    }
+
+    /// Set client name
+    pub fn with_client_name(mut self, name: impl Into<String>) -> Self {
+        self.client_metadata.client_name = Some(name.into().into());
+        self
+    }
+
+    /// Set ToS URI
+    pub fn with_tos_uri(mut self, uri: Url) -> Self {
+        self.client_metadata.tos_uri = Some(uri);
+        self
+    }
+
+    /// Set logo URI
+    pub fn with_logo_uri(mut self, uri: Url) -> Self {
+        self.client_metadata.logo_uri = Some(uri);
+        self
+    }
+
+    /// Set client URI
+    pub fn with_client_uri(mut self, uri: Url) -> Self {
+        self.client_metadata.client_uri = Some(uri);
+        self
+    }
+
+    /// Set redirect URIs
+    pub fn with_redirect_uris(mut self, uris: Vec<Url>) -> Self {
+        self.client_metadata.redirect_uris = uris;
+        self
+    }
+
+    /// Set policy URI
+    pub fn with_policy_uri(mut self, uri: Url) -> Self {
+        self.client_metadata.privacy_policy_uri = Some(uri);
         self
     }
 
@@ -118,8 +164,8 @@ impl ProxyConfig {
             "keys": [{
                 "kty": "EC",
                 "crv": "P-256",
-                "x": base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(x.as_slice()),
-                "y": base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(y.as_slice()),
+                "x": base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(x.iter().as_slice()),
+                "y": base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(y.iter().as_slice()),
                 "use": "sig",
                 "alg": "ES256",
                 "kid": "proxy-signing-key"

@@ -9,12 +9,17 @@ async-trait = "0.1"
 axum = "0.8.6"
 chrono = "0.4"
 http = "1.2"
-jacquard = { path = "../../jacquard/crates/jacquard" }
-jacquard-axum = { path = "../../jacquard/crates/jacquard-axum" }
-jacquard-common = { path = "../../jacquard/crates/jacquard-common" }
-jacquard-identity = { path = "../../jacquard/crates/jacquard-identity" }
-jacquard-oauth = { path = "../../jacquard/crates/jacquard-oauth" }
+
+# Use workspace dependencies declared in the top-level Cargo.toml
+jacquard = { workspace = true }
+jacquard-axum = { workspace = true }
+jacquard-common = { workspace = true }
+jacquard-identity = { workspace = true }
+jacquard-oauth = { workspace = true }
+
+# Local workspace member
 jacquard-oatproxy = { path = "../jacquard-oatproxy" }
+
 jose-jwk = "0.1"
 lexicons = { path = "../lexicons" }
 miette = { version = "7.6.0", features = ["fancy"] }
