@@ -156,7 +156,6 @@ async fn main() -> Result<()> {
     let proxy_config =
         jacquard_oatproxy::ProxyConfig::new(url::Url::parse(&public_url).into_diagnostic()?)
             .with_dpop_nonce_secret(hmac_secret);
-    //.with_downstream_token_expiry(60); // 1 minute for testing
 
     let oatproxy_server = jacquard_oatproxy::OAuthProxyServer::builder()
         .config(proxy_config)

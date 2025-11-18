@@ -601,12 +601,6 @@ where
         iss: params.iss.as_deref().map(|s| s.into()),
     };
 
-    tracing::info!("calling oauth_client.callback with code and state");
-    tracing::info!(
-        "client_id from config: {}",
-        server.config.client_metadata.client_id
-    );
-
     let oauth_session = server
         .oauth_client
         .callback(callback_params)
@@ -1036,7 +1030,6 @@ where
 
     // 4. Build upstream URL
     let path = uri.path_and_query().map(|pq| pq.as_str()).unwrap_or("");
-    tracing::info!("{:?}", &upstream_session_data);
     let host_url = upstream_session_data
         .host_url
         .as_str()
