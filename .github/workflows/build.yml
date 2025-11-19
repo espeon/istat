@@ -57,9 +57,8 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}-${{ matrix.arch }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          load: false
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
+          provenance: false
+          outputs: type=image,push=true
 
   publish-binaries:
     if: github.event_name == 'release'
