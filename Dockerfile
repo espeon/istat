@@ -1,4 +1,3 @@
-# multi-stage build: frontend, backend, final image
 FROM node:24-slim AS frontend-builder
 
 WORKDIR /app/frontend
@@ -16,7 +15,7 @@ COPY lex/ ../lex/
 # build frontend
 RUN pnpm build
 
-# rust builder stage - use bullseye for older glibc and OpenSSL 1.1 compatibility
+# rust builder stage
 FROM rust:1-bullseye AS rust-builder
 
 WORKDIR /app
@@ -33,15 +32,13 @@ COPY server/ ./server/
 COPY jacquard-oatproxy/ ./jacquard-oatproxy/
 COPY lexicons/ ./lexicons/
 
-# build release binary with reduced parallelism to avoid OOM
-RUN cargo build --release --bin server -j 2
+RUN cargo build --release --bin server
 
-# final stage - use bullseye for broad glibc compatibility
-FROM debian:bullseye-slim
+# final stage
+FROM debian:bullseye
 
 WORKDIR /app
 
-# install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
