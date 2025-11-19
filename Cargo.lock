@@ -1604,6 +1604,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "http-range-header"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9171a2ea8a68358193d15dd5d70c1c10a2afc3e7e4c5bc92bc9f025cebd7359c"
+
+[[package]]
 name = "httparse"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1933,6 +1939,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 [[package]]
 name = "jacquard"
 version = "0.9.3"
+source = "git+https://tangled.org/nonbinary.computer/jacquard#324cbb45078fe2f77b60ae2bd7765c5306ec8b5e"
 dependencies = [
  "bytes",
  "getrandom 0.2.16",
@@ -1962,6 +1969,7 @@ dependencies = [
 [[package]]
 name = "jacquard-api"
 version = "0.9.2"
+source = "git+https://tangled.org/nonbinary.computer/jacquard#324cbb45078fe2f77b60ae2bd7765c5306ec8b5e"
 dependencies = [
  "bon",
  "bytes",
@@ -1979,6 +1987,7 @@ dependencies = [
 [[package]]
 name = "jacquard-axum"
 version = "0.9.2"
+source = "git+https://tangled.org/nonbinary.computer/jacquard#324cbb45078fe2f77b60ae2bd7765c5306ec8b5e"
 dependencies = [
  "axum",
  "bytes",
@@ -2000,6 +2009,7 @@ dependencies = [
 [[package]]
 name = "jacquard-common"
 version = "0.9.2"
+source = "git+https://tangled.org/nonbinary.computer/jacquard#324cbb45078fe2f77b60ae2bd7765c5306ec8b5e"
 dependencies = [
  "base64 0.22.1",
  "bon",
@@ -2037,6 +2047,7 @@ dependencies = [
 [[package]]
 name = "jacquard-derive"
 version = "0.9.3"
+source = "git+https://tangled.org/nonbinary.computer/jacquard#324cbb45078fe2f77b60ae2bd7765c5306ec8b5e"
 dependencies = [
  "heck 0.5.0",
  "jacquard-lexicon",
@@ -2048,6 +2059,7 @@ dependencies = [
 [[package]]
 name = "jacquard-identity"
 version = "0.9.2"
+source = "git+https://tangled.org/nonbinary.computer/jacquard#324cbb45078fe2f77b60ae2bd7765c5306ec8b5e"
 dependencies = [
  "bon",
  "bytes",
@@ -2073,6 +2085,7 @@ dependencies = [
 [[package]]
 name = "jacquard-lexicon"
 version = "0.9.2"
+source = "git+https://tangled.org/nonbinary.computer/jacquard#324cbb45078fe2f77b60ae2bd7765c5306ec8b5e"
 dependencies = [
  "cid",
  "dashmap",
@@ -2133,6 +2146,7 @@ dependencies = [
 [[package]]
 name = "jacquard-oauth"
 version = "0.9.2"
+source = "git+https://tangled.org/nonbinary.computer/jacquard#324cbb45078fe2f77b60ae2bd7765c5306ec8b5e"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -2524,6 +2538,7 @@ dependencies = [
 [[package]]
 name = "mini-moka"
 version = "0.10.99"
+source = "git+https://tangled.org/nonbinary.computer/jacquard#324cbb45078fe2f77b60ae2bd7765c5306ec8b5e"
 dependencies = [
  "crossbeam-channel",
  "crossbeam-utils",
@@ -4571,11 +4586,20 @@ checksum = "adc82fd73de2a9722ac5da747f12383d2bfdb93591ee6c58486e0097890f05f2"
 dependencies = [
  "bitflags",
  "bytes",
+ "futures-core",
  "futures-util",
  "http",
  "http-body",
+ "http-body-util",
+ "http-range-header",
+ "httpdate",
  "iri-string",
+ "mime",
+ "mime_guess",
+ "percent-encoding",
  "pin-project-lite",
+ "tokio",
+ "tokio-util",
  "tower",
  "tower-layer",
  "tower-service",

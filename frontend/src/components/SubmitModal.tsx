@@ -33,7 +33,6 @@ export function SubmitModal({ isOpen, onClose }: SubmitModalProps) {
   // emoji search state
   const [emojiQuery, setEmojiQuery] = useState("");
   const [emojiResults, setEmojiResults] = useState<EmojiSearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
   // add emoji state
@@ -71,7 +70,7 @@ export function SubmitModal({ isOpen, onClose }: SubmitModalProps) {
   }, [emojiQuery]);
 
   const searchEmojis = async (query: string) => {
-    setIsSearching(true);
+    //setIsSearching(true);
     try {
       const data = await ok(
         client.get("vg.nat.istat.moji.searchEmoji", {
@@ -83,7 +82,7 @@ export function SubmitModal({ isOpen, onClose }: SubmitModalProps) {
     } catch (err) {
       console.error("failed to search emojis:", err);
     } finally {
-      setIsSearching(false);
+      //setIsSearching(false);
     }
   };
 

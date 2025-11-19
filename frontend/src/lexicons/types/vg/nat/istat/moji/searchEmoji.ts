@@ -11,6 +11,10 @@ const _emojiViewSchema = /*#__PURE__*/ v.object({
    */
   altText: /*#__PURE__*/ v.optional(/*#__PURE__*/ v.string()),
   /**
+   * CID of the emoji blob
+   */
+  blobCid: /*#__PURE__*/ v.string(),
+  /**
    * DID of the user who created this emoji
    */
   createdBy: /*#__PURE__*/ v.didString(),

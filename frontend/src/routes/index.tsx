@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { ok } from "@atcute/client";
-import { Plus, SquarePen } from "lucide-react";
+import { SquarePen } from "lucide-react";
 import { useQt } from "../lib/qt-provider";
 import { Header, useScrollDetection } from "../components/Header";
 import { UserBanner } from "../components/UserBanner";

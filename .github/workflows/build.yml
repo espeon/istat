@@ -1,0 +1,167 @@
+name: build and publish
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-native:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+          - runner: ubuntu-24.04-arm64
+            arch: arm64
+            target: aarch64-unknown-linux-gnu
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-${{ matrix.arch }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: build server
+        run: cargo build --release --bin server --target ${{ matrix.target }}
+
+      - name: prepare binary
+        run: |
+          mkdir -p artifacts
+          cp target/${{ matrix.target }}/release/server artifacts/server-${{ matrix.arch }}
+          chmod +x artifacts/server-${{ matrix.arch }}
+
+      - name: upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ matrix.arch }}
+          path: artifacts/server-${{ matrix.arch }}
+          retention-days: 7
+
+      - name: log in to container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: build and push container image
+        run: |
+          cat > Dockerfile.${{ matrix.arch }} <<'EOF'
+          FROM debian:bookworm-slim
+          RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+          COPY artifacts/server-${{ matrix.arch }} /usr/local/bin/server
+          EXPOSE 8080
+          CMD ["/usr/local/bin/server"]
+          EOF
+
+          # determine tag based on event type
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="main-$(git rev-parse --short HEAD)"
+          fi
+
+          docker build -f Dockerfile.${{ matrix.arch }} -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}-${{ matrix.arch }} .
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}-${{ matrix.arch }}
+
+  publish-binaries:
+    if: github.event_name == 'release'
+    needs: build-native
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: download x86_64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: server-x86_64
+          path: artifacts
+
+      - name: download arm64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: server-arm64
+          path: artifacts
+
+      - name: upload binaries to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/server-x86_64
+            artifacts/server-arm64
+
+  create-multiarch-image:
+    needs: build-native
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: log in to container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: create and push multiarch manifest
+        run: |
+          # determine tag based on event type
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="main-$(git rev-parse --short HEAD)"
+          fi
+
+          docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}-x86_64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}-arm64
+
+          docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}-x86_64 \
+            --os linux --arch amd64
+
+          docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}-arm64 \
+            --os linux --arch arm64
+
+          docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}
+
+          # also tag as latest for releases
+          if [ "${{ github.event_name }}" = "release" ]; then
+            docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}-x86_64 \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}-arm64
+
+            docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}-x86_64 \
+              --os linux --arch amd64
+
+            docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}-arm64 \
+              --os linux --arch arm64
+
+            docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          fi

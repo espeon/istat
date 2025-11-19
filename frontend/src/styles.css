@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Momo+Signature&family=TASA+Orbiter:wght@400..800&display=swap");
+@import "tailwindcss";
 
 @theme {
     /* Font families */

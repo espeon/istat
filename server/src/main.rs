@@ -12,6 +12,7 @@ use lexicons::vg_nat::istat::{
 use miette::{IntoDiagnostic, Result};
 use sqlx::{Row, sqlite::SqlitePool};
 use tower_http::cors::CorsLayer;
+use tower_http::services::ServeDir;
 
 mod jetstream;
 mod oatproxy;
@@ -178,8 +179,18 @@ async fn main() -> Result<()> {
         .with_state(state.clone());
 
     let dev_mode = std::env::var("DEV_MODE").unwrap_or_default() == "true";
+    let disable_frontend = std::env::var("ISTAT_DISABLE_FRONTEND").unwrap_or_default() == "true";
 
-    let app = if dev_mode {
+    let app = if disable_frontend {
+        // Frontend disabled - only serve API and OAuth endpoints
+        tracing::info!("Frontend disabled - serving only API and OAuth endpoints");
+
+        Router::new()
+            .merge(xrpc_router)
+            .with_state(state.clone())
+            .fallback_service(oatproxy_server.router())
+            .layer(CorsLayer::permissive())
+    } else if dev_mode {
         // In dev mode, proxy non-API requests to Vite dev server
         tracing::info!("Running in dev mode - proxying to Vite at localhost:3001");
 
@@ -234,12 +245,18 @@ async fn main() -> Result<()> {
             .fallback_service(oatproxy_server.router().fallback(vite_proxy))
             .layer(CorsLayer::permissive())
     } else {
-        // In prod mode, use OAuth proxy as fallback
+        // In prod mode, serve static files from dist directory
+        tracing::info!("Running in production mode - serving static files from dist/");
+
+        let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "dist".to_string());
+        let serve_dir = ServeDir::new(&static_dir)
+            .append_index_html_on_directories(true)
+            .fallback(ServeDir::new(format!("{}/index.html", static_dir)));
+
         Router::new()
-            .route("/", axum::routing::get(handle_root))
             .merge(xrpc_router)
-            .with_state(state)
-            .fallback_service(oatproxy_server.router())
+            .with_state(state.clone())
+            .fallback_service(oatproxy_server.router().fallback_service(serve_dir))
             .layer(CorsLayer::permissive())
     };
 

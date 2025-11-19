@@ -13,6 +13,8 @@ interface StatusCardProps {
     description?: string;
     expires?: string;
     createdAt: string;
+    emojiName?: string;
+    emojiAlt?: string;
   };
   index: number;
 }

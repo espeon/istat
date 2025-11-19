@@ -9,6 +9,3 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
-
-// file: env.d.ts
-/// <reference types="@atcute/bluesky" />

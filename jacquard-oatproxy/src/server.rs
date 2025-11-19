@@ -235,7 +235,6 @@ where
     K: KeyStore + Clone + 'static,
 {
     use base64::Engine;
-    use p256::elliptic_curve::sec1::ToEncodedPoint;
 
     let signing_key = server.key_store.get_signing_key().await?;
     let verifying_key = signing_key.verifying_key();

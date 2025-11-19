@@ -3,10 +3,10 @@ members = ["server", "lexicons", "jacquard-oatproxy"]
 resolver = "2"
 
 [workspace.dependencies]
-jacquard = { path = "../jacquard/crates/jacquard" }
-jacquard-axum = { path = "../jacquard/crates/jacquard-axum" }
-jacquard-common = { path = "../jacquard/crates/jacquard-common" }
-jacquard-identity = { path = "../jacquard/crates/jacquard-identity" }
-jacquard-oauth = { path = "../jacquard/crates/jacquard-oauth" }
-jacquard-derive = { path = "../jacquard/crates/jacquard-derive" }
-jacquard-lexicon = { path = "../jacquard/crates/jacquard-lexicon" }
+jacquard = { git = "https://tangled.org/nonbinary.computer/jacquard" }
+jacquard-axum = { git = "https://tangled.org/nonbinary.computer/jacquard" }
+jacquard-common = { git = "https://tangled.org/nonbinary.computer/jacquard" }
+jacquard-identity = { git = "https://tangled.org/nonbinary.computer/jacquard" }
+jacquard-oauth = { git = "https://tangled.org/nonbinary.computer/jacquard" }
+jacquard-derive = { git = "https://tangled.org/nonbinary.computer/jacquard" }
+jacquard-lexicon = { git = "https://tangled.org/nonbinary.computer/jacquard" }
