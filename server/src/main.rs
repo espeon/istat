@@ -1,4 +1,11 @@
-use axum::{Json, Router, extract::State, http::header::COOKIE};
+use axum::{
+    Json, Router,
+    body::Body,
+    extract::State,
+    http::header::COOKIE,
+    http::{Request, StatusCode, Uri},
+    response::{IntoResponse, Response},
+};
 use jacquard::api::com_atproto::identity::resolve_handle::ResolveHandleRequest;
 use jacquard_axum::IntoRouter;
 use lexicons::vg_nat::istat::{
@@ -12,6 +19,8 @@ use lexicons::vg_nat::istat::{
 use miette::{IntoDiagnostic, Result};
 use serde::Serialize;
 use sqlx::{Row, sqlite::SqlitePool};
+use std::path::PathBuf;
+use tower::ServiceExt;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 
@@ -58,38 +67,38 @@ async fn handle_client_metadata(State(state): State<AppState>) -> Json<ClientMet
     })
 }
 
-async fn handle_root(State(state): State<AppState>, headers: axum::http::HeaderMap) -> String {
-    // Try to get session from cookie
-    let session_id = headers
-        .get(COOKIE)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|cookies| {
-            cookies.split(';').find_map(|cookie| {
-                let cookie = cookie.trim();
-                cookie.strip_prefix("session_id=")
-            })
-        });
+// async fn handle_root(State(state): State<AppState>, headers: axum::http::HeaderMap) -> String {
+//     // Try to get session from cookie
+//     let session_id = headers
+//         .get(COOKIE)
+//         .and_then(|v| v.to_str().ok())
+//         .and_then(|cookies| {
+//             cookies.split(';').find_map(|cookie| {
+//                 let cookie = cookie.trim();
+//                 cookie.strip_prefix("session_id=")
+//             })
+//         });
 
-    if let Some(session_id) = session_id {
-        // Look up session in database
-        if let Ok(Some(row)) = sqlx::query(
-            r#"
-            SELECT did
-            FROM auth_sessions
-            WHERE id = ? AND expires_at > datetime('now')
-            "#,
-        )
-        .bind(session_id)
-        .fetch_optional(&state.db)
-        .await
-        {
-            let did: String = row.get(0);
-            return format!("hello, {}!", did);
-        }
-    }
+//     if let Some(session_id) = session_id {
+//         // Look up session in database
+//         if let Ok(Some(row)) = sqlx::query(
+//             r#"
+//             SELECT did
+//             FROM auth_sessions
+//             WHERE id = ? AND expires_at > datetime('now')
+//             "#,
+//         )
+//         .bind(session_id)
+//         .fetch_optional(&state.db)
+//         .await
+//         {
+//             let did: String = row.get(0);
+//             return format!("hello, {}!", did);
+//         }
+//     }
 
-    "hello world!".to_string()
-}
+//     "hello world!".to_string()
+// }
 
 async fn init_db(db_url: &str) -> Result<SqlitePool> {
     let pool = SqlitePool::connect(db_url).await.into_diagnostic()?;
@@ -312,18 +321,41 @@ async fn main() -> Result<()> {
             .fallback_service(oatproxy_server.router().fallback(vite_proxy))
             .layer(CorsLayer::permissive())
     } else {
-        // In prod mode, serve static files from dist directory
-        tracing::info!("Running in production mode - serving static files from dist/");
+        // In prod mode, serve static files from dist directory (SPA mode)
+        tracing::info!("Running in production mode - serving static files from dist/ (SPA mode)");
 
         let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "dist".to_string());
-        let serve_dir = ServeDir::new(&static_dir)
-            .append_index_html_on_directories(true)
-            .fallback(ServeDir::new(format!("{}/index.html", static_dir)));
+        let static_dir_clone = static_dir.clone();
+
+        // Create a custom service for SPA fallback
+        let spa_fallback = move |req: Request<Body>| {
+            let static_dir = static_dir_clone.clone();
+            async move {
+                let path = req.uri().path();
+                let file_path = PathBuf::from(&static_dir).join(path.trim_start_matches('/'));
+
+                // If file exists, serve it; otherwise serve index.html for client-side routing
+                if file_path.is_file() {
+                    ServeDir::new(&static_dir).oneshot(req).await
+                } else {
+                    // Serve index.html for SPA routing
+                    let index_path = PathBuf::from(&static_dir).join("index.html");
+                    ServeDir::new(&static_dir)
+                        .oneshot(
+                            Request::builder()
+                                .uri("/index.html")
+                                .body(Body::empty())
+                                .unwrap(),
+                        )
+                        .await
+                }
+            }
+        };
 
         Router::new()
             .merge(xrpc_router)
             .with_state(state.clone())
-            .fallback_service(oatproxy_server.router().fallback_service(serve_dir))
+            .fallback_service(oatproxy_server.router().fallback(spa_fallback))
             .layer(CorsLayer::permissive())
     };
 
