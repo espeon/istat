@@ -16,8 +16,8 @@ COPY lex/ ../lex/
 # build frontend
 RUN pnpm build
 
-# rust builder stage - use bullseye for older glibc compatibility
-FROM rust:1-bookworm AS rust-builder
+# rust builder stage - use bullseye for older glibc and OpenSSL 1.1 compatibility
+FROM rust:1-bullseye AS rust-builder
 
 WORKDIR /app
 
