@@ -491,11 +491,16 @@ impl LexiconIngestor for AccountIngestor {
 
 pub async fn start_jetstream(db: SqlitePool) -> Result<()> {
     let opts = JetstreamOptions::builder()
+        .ws_url(rocketman::endpoints::JetstreamEndpoints::Public(
+            rocketman::endpoints::JetstreamEndpointLocations::UsEast,
+            1,
+        ))
         .wanted_collections(vec![
+            "app.bsky.actor.profile".to_string(),
             "vg.nat.istat.moji.emoji".to_string(),
             "vg.nat.istat.status.record".to_string(),
-            "app.bsky.actor.profile".to_string(),
         ])
+        .bound(8 * 8 * 8 * 8 * 8 * 8) // 262144
         .build();
 
     let jetstream = JetstreamConnection::new(opts);
