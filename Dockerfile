@@ -37,7 +37,7 @@ COPY lexicons/ ./lexicons/
 RUN cargo build --release --bin server -j 2
 
 # final stage
-FROM debian:bookworm-slim
+FROM debian:forky-slim
 
 WORKDIR /app
 
