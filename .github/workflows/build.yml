@@ -149,8 +149,8 @@ jobs:
 
           docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}
 
-          # also tag as latest for releases
-          if [ "${{ github.event_name }}" = "release" ]; then
+          # also tag as latest for releases or main branch commits
+          if [ "${{ github.event_name }}" = "release" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
             docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}-x86_64 \
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}-arm64
