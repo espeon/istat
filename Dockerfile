@@ -36,8 +36,8 @@ COPY lexicons/ ./lexicons/
 # build release binary with reduced parallelism to avoid OOM
 RUN cargo build --release --bin server -j 2
 
-# final stage
-FROM debian:forky-slim
+# final stage - use bullseye for broad glibc compatibility
+FROM debian:bullseye-slim
 
 WORKDIR /app
 
