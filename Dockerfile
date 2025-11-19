@@ -40,7 +40,7 @@ FROM rust:slim-bullseye
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
-    ca-certificates \
+    ca-certificates openssl \
     && rm -rf /var/lib/apt/lists/*
 
 # copy server binary
