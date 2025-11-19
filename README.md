@@ -54,19 +54,19 @@ multiarch images (x86_64 + arm64) published to GitHub Container Registry:
 
 ```bash
 # latest release
-docker pull ghcr.io/<username>/istat:latest
+docker pull ghcr.io/espeon/istat:latest
 
 # specific version
-docker pull ghcr.io/<username>/istat:v1.0.0
+docker pull ghcr.io/espeon/istat:v1.0.0
 
 # latest main branch
-docker pull ghcr.io/<username>/istat:main-<sha>
+docker pull ghcr.io/espeon/istat:main-<sha>
 ```
 
 run with frontend:
 
 ```bash
-docker run -p 8080:8080 -v $(pwd)/data:/data ghcr.io/<username>/istat:latest
+docker run -p 8080:8080 -v $(pwd)/data:/data ghcr.io/espeon/istat:latest
 ```
 
 run API-only (frontend served separately):
@@ -74,7 +74,7 @@ run API-only (frontend served separately):
 ```bash
 docker run -p 8080:8080 -v $(pwd)/data:/data \
   -e ISTAT_DISABLE_FRONTEND=true \
-  ghcr.io/<username>/istat:latest
+  ghcr.io/espeon/istat:latest
 ```
 
 ## docker compose
