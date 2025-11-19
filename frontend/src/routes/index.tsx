@@ -115,6 +115,7 @@ function App() {
       {isLoggedIn ? (
         <UserBanner
           profile={profile}
+          did={did}
           loading={loadingProfile}
           onLogout={handleLogout}
           onOpenStatusModal={() => setIsModalOpen(true)}

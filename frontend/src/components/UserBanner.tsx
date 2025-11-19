@@ -6,6 +6,7 @@ interface UserBannerProps {
     handle: string;
     avatar?: string;
   } | null;
+  did: string | null;
   loading: boolean;
   onLogout: () => void;
   onOpenStatusModal?: () => void;
@@ -13,6 +14,7 @@ interface UserBannerProps {
 
 export function UserBanner({
   profile,
+  did,
   loading,
   onLogout,
   onOpenStatusModal,
@@ -69,7 +71,27 @@ export function UserBanner({
               </button>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              hi {did}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onOpenStatusModal}
+                className="hidden md:block px-3 py-1.5 text-xs transition-all duration-200 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] hover:opacity-90"
+              >
+                post status
+              </button>
+              <button
+                onClick={onLogout}
+                className="px-3 py-1.5 text-xs transition-all duration-200 text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))]"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
