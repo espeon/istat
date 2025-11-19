@@ -1,0 +1,27 @@
+services:
+  istat:
+    image: ghcr.io/<username>/istat:latest
+    container_name: istat
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      # server configuration
+      DATABASE_URL: sqlite:/data/istat.db
+      PUBLIC_URL: https://your-domain.com
+      BIND_ADDR: 0.0.0.0:8080
+
+      # feature toggles
+      ISTAT_ENABLE_JETSTREAM: "true"
+      ISTAT_DISABLE_FRONTEND: "false"
+
+      # upstream oauth client metadata (customize these!)
+      ISTAT_CLIENT_NAME: "My iStat Instance"
+      ISTAT_TOS_URI: https://your-domain.com/tos
+      ISTAT_POLICY_URI: https://your-domain.com/privacy
+      ISTAT_LOGO_URI: https://your-domain.com/logo.png
+
+      # logging
+      RUST_LOG: info,jacquard_oauth_proxy=debug

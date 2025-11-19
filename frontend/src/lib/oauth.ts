@@ -14,9 +14,9 @@ import { ProxyIdentityResolver } from "./proxy-resolver";
 
 let isConfigured = false;
 
-// OAuth proxy URL - change this to point to your proxy server
+// OAuth proxy URL - defaults to current origin, can be overridden via env var
 const OAUTH_PROXY_URL =
-  "https://creator-elementary-fate-fair.trycloudflare.com";
+  import.meta.env.VITE_OAUTH_PROXY_URL || window.location.origin;
 
 export function initOAuth() {
   if (isConfigured) {
@@ -24,8 +24,12 @@ export function initOAuth() {
     return;
   }
 
-  const client_id = import.meta.env.VITE_OAUTH_CLIENT_ID;
-  const redirect_uri = import.meta.env.VITE_OAUTH_REDIRECT_URI;
+  // Default to current origin for client_id and redirect_uri if not specified
+  const origin = window.location.origin;
+  const client_id =
+    import.meta.env.VITE_OAUTH_CLIENT_ID || `${origin}/client-metadata.json`;
+  const redirect_uri =
+    import.meta.env.VITE_OAUTH_REDIRECT_URI || `${origin}/oauth/callback`;
 
   console.log("Configuring OAuth with:", {
     client_id,

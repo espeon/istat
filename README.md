@@ -77,14 +77,47 @@ docker run -p 8080:8080 -v $(pwd)/data:/data \
   ghcr.io/<username>/istat:latest
 ```
 
+## docker compose
+
+for production deployments, use the provided `docker-compose.yml`:
+
+```bash
+# edit docker-compose.yml and customize environment variables
+# especially PUBLIC_URL, ISTAT_CLIENT_NAME, and policy URLs
+
+docker compose up -d
+```
+
+the compose file includes:
+- persistent volume for database
+- all configuration via environment variables
+- optional reverse proxy labels (traefik/caddy)
+
+for HTTPS, uncomment the caddy service or use your preferred reverse proxy. see `Caddyfile.example` for caddy configuration.
+
 ### environment variables
+
+**server configuration:**
 
 - `DATABASE_URL` - database connection string (default: `sqlite:/data/istat.db`)
 - `PUBLIC_URL` - public-facing URL for OAuth redirects (default: `http://localhost:3000`)
 - `BIND_ADDR` - address to bind server (default: `0.0.0.0:8080`)
+- `RUST_LOG` - logging configuration (default: `simple_server=debug,jacquard_oauth_proxy=debug,info`)
+
+**feature toggles:**
+
 - `DEV_MODE` - proxy to Vite dev server on localhost:3001 (default: `false`)
 - `ISTAT_DISABLE_FRONTEND` - disable frontend serving, API/OAuth only (default: `false`)
+- `ISTAT_ENABLE_JETSTREAM` - enable Jetstream event ingestion (default: `true`)
+- `ISTAT_VITE_PORT` - Vite dev server port for DEV_MODE (default: `3001`)
 - `STATIC_DIR` - directory to serve static files from (default: `dist`)
+
+**upstream oauth client metadata (shown to users during authorization):**
+
+- `ISTAT_CLIENT_NAME` - application name shown to users (default: `istat OAuth Proxy`)
+- `ISTAT_TOS_URI` - terms of service URL
+- `ISTAT_POLICY_URI` - privacy policy URL
+- `ISTAT_LOGO_URI` - logo image URL
 
 ## development
 

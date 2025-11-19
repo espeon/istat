@@ -1,4 +1,4 @@
-use axum::{Router, extract::State, http::header::COOKIE};
+use axum::{Json, Router, extract::State, http::header::COOKIE};
 use jacquard::api::com_atproto::identity::resolve_handle::ResolveHandleRequest;
 use jacquard_axum::IntoRouter;
 use lexicons::vg_nat::istat::{
@@ -10,6 +10,7 @@ use lexicons::vg_nat::istat::{
     },
 };
 use miette::{IntoDiagnostic, Result};
+use serde::Serialize;
 use sqlx::{Row, sqlite::SqlitePool};
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
@@ -21,6 +22,40 @@ mod xrpc;
 #[derive(Clone)]
 struct AppState {
     db: SqlitePool,
+    public_url: String,
+}
+
+#[derive(Serialize)]
+struct ClientMetadata {
+    client_id: String,
+    client_name: String,
+    client_uri: String,
+    redirect_uris: Vec<String>,
+    scope: String,
+    grant_types: Vec<String>,
+    response_types: Vec<String>,
+    application_type: String,
+    token_endpoint_auth_method: String,
+    dpop_bound_access_tokens: bool,
+}
+
+async fn handle_client_metadata(State(state): State<AppState>) -> Json<ClientMetadata> {
+    let base_url = &state.public_url;
+    Json(ClientMetadata {
+        client_id: format!("{}/client-metadata.json", base_url),
+        client_name: "iStat Web Client".to_string(),
+        client_uri: base_url.clone(),
+        redirect_uris: vec![format!("{}/oauth/callback", base_url)],
+        scope: "atproto transition:generic".to_string(),
+        grant_types: vec![
+            "authorization_code".to_string(),
+            "refresh_token".to_string(),
+        ],
+        response_types: vec!["code".to_string()],
+        application_type: "web".to_string(),
+        token_endpoint_auth_method: "none".to_string(),
+        dpop_bound_access_tokens: true,
+    })
 }
 
 async fn handle_root(State(state): State<AppState>, headers: axum::http::HeaderMap) -> String {
@@ -154,9 +189,34 @@ async fn main() -> Result<()> {
         store_builder = store_builder.with_signing_key(key);
     }
     let oatproxy_store = store_builder.build();
-    let proxy_config =
+
+    // Build proxy config with optional customization
+    let mut proxy_config =
         jacquard_oatproxy::ProxyConfig::new(url::Url::parse(&public_url).into_diagnostic()?)
             .with_dpop_nonce_secret(hmac_secret);
+
+    // Configure upstream client metadata via env vars
+    if let Ok(client_name) = std::env::var("ISTAT_CLIENT_NAME") {
+        proxy_config = proxy_config.with_client_name(client_name);
+    }
+
+    if let Ok(tos_uri) = std::env::var("ISTAT_TOS_URI") {
+        if let Ok(uri) = url::Url::parse(&tos_uri) {
+            proxy_config = proxy_config.with_tos_uri(uri);
+        }
+    }
+
+    if let Ok(logo_uri) = std::env::var("ISTAT_LOGO_URI") {
+        if let Ok(uri) = url::Url::parse(&logo_uri) {
+            proxy_config = proxy_config.with_logo_uri(uri);
+        }
+    }
+
+    if let Ok(policy_uri) = std::env::var("ISTAT_POLICY_URI") {
+        if let Ok(uri) = url::Url::parse(&policy_uri) {
+            proxy_config = proxy_config.with_policy_uri(uri);
+        }
+    }
 
     let oatproxy_server = jacquard_oatproxy::OAuthProxyServer::builder()
         .config(proxy_config)
@@ -165,9 +225,16 @@ async fn main() -> Result<()> {
         .build()
         .into_diagnostic()?;
 
-    let state = AppState { db: pool };
+    let state = AppState {
+        db: pool,
+        public_url: public_url.clone(),
+    };
 
     let xrpc_router = Router::new()
+        .route(
+            "/client-metadata.json",
+            axum::routing::get(handle_client_metadata),
+        )
         .merge(ResolveHandleRequest::into_router(xrpc::handle_resolve))
         .merge(GetProfileRequest::into_router(xrpc::handle_get_profile))
         .merge(SearchEmojiRequest::into_router(xrpc::handle_search_emoji))
