@@ -339,7 +339,7 @@ async fn main() -> Result<()> {
                     ServeDir::new(&static_dir).oneshot(req).await
                 } else {
                     // Serve index.html for SPA routing
-                    let index_path = PathBuf::from(&static_dir).join("index.html");
+                    //let index_path = PathBuf::from(&static_dir).join("index.html");
                     ServeDir::new(&static_dir)
                         .oneshot(
                             Request::builder()
