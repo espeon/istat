@@ -35,7 +35,7 @@ COPY lexicons/ ./lexicons/
 RUN cargo build --release --bin server
 
 # final stage
-FROM debian:bullseye
+FROM rust:slim-bullseye
 
 WORKDIR /app
 
