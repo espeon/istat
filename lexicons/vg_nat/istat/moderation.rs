@@ -3,6 +3,7 @@
 // This file was automatically generated from Lexicon schemas.
 // Any manual changes will be overwritten on the next regeneration.
 
-pub mod delete_emoji;
-pub mod emoji;
-pub mod search_emoji;
+pub mod blacklist_cid;
+pub mod is_admin;
+pub mod list_blacklisted;
+pub mod remove_blacklist;

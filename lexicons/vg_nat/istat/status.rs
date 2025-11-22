@@ -3,6 +3,7 @@
 // This file was automatically generated from Lexicon schemas.
 // Any manual changes will be overwritten on the next regeneration.
 
+pub mod delete_status;
 pub mod get_status;
 pub mod list_statuses;
 pub mod list_user_statuses;
