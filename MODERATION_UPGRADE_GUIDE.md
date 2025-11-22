@@ -35,14 +35,24 @@ Two new migrations will run automatically on server startup:
 ### Required for Admin Access
 
 ```bash
-# Set the DID of the initial admin user
+# Set the DID(s) of the initial admin user(s)
+# Single admin:
 ADMIN_DID=did:plc:youradmindidhere
+
+# Multiple admins (comma-separated):
+ADMIN_DID=did:plc:admin1,did:web:admin2.example.com,did:plc:admin3
 ```
 
 **How to get your DID:**
 1. Log into the application with your account
 2. Check the browser console or network requests for your DID
 3. Or query: `SELECT did FROM profiles WHERE handle = 'yourhandle.bsky.social'`
+
+**Multiple admins:**
+- Separate DIDs with commas
+- Whitespace around commas is automatically trimmed
+- All specified DIDs will have admin access
+- Each admin is automatically added to the database on first login
 
 ### Already Required (reminder)
 
@@ -65,7 +75,12 @@ cargo build --release --bin server
 
 ```bash
 # Add to your .env file or export before running:
+# Single admin:
 export ADMIN_DID=did:plc:your_admin_did_here
+
+# Or multiple admins (comma-separated):
+export ADMIN_DID=did:plc:admin1,did:web:admin2.com,did:plc:admin3
+
 export OAUTH_ISSUER=your_issuer_url
 ```
 
@@ -220,6 +235,8 @@ Content is simply hidden from your local index.
 
 **Check:**
 1. Is `ADMIN_DID` set correctly in environment?
+   - For multiple admins, ensure comma-separated with no syntax errors
+   - Example: `did:plc:abc,did:web:example.com` (no quotes in env var)
 2. Restart server after setting environment variable
 3. Log out and log back in
 4. Check server logs for admin table insert
@@ -229,7 +246,7 @@ Content is simply hidden from your local index.
 SELECT * FROM admins;
 ```
 
-Should show your DID.
+Should show your DID(s). Note: Admins are only inserted on first login after env var is set.
 
 ### Migrations not running
 

@@ -36,9 +36,16 @@ async fn extract_authenticated_did(
 
 /// Check if a DID is an admin
 async fn is_admin(did: &str, state: &AppState) -> Result<bool, StatusCode> {
-    // First check if this DID matches the initial admin from env var
-    if let Ok(initial_admin) = env::var("ADMIN_DID") {
-        if did == initial_admin {
+    // First check if this DID matches any initial admin from env var
+    // ADMIN_DID can be a single DID or comma-separated list: "did:web:abc,did:web:xyz"
+    if let Ok(admin_dids_str) = env::var("ADMIN_DID") {
+        let admin_dids: Vec<&str> = admin_dids_str
+            .split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        if admin_dids.contains(&did) {
             // Ensure this DID is in the admins table
             sqlx::query("INSERT OR IGNORE INTO admins (did, granted_by, notes) VALUES (?, NULL, ?)")
                 .bind(did)
