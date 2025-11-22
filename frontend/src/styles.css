@@ -120,49 +120,54 @@ body {
     position: relative;
 }
 
-/* Soft ambient glow orbs */
+/* Animated rain texture background */
 body::before {
     content: "";
     position: fixed;
-    top: -20%;
-    left: -10%;
-    width: 60%;
-    height: 60%;
-    background: radial-gradient(
-        circle,
-        rgba(var(--primary), 0.15) 0%,
-        transparent 70%
-    );
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("/rain.gif");
+    background-size: 200px 200px;
+    opacity: 0.4;
     pointer-events: none;
     z-index: 0;
-    animation: floatOrb1 20s ease-in-out infinite;
+    mix-blend-mode: overlay;
 }
 
+/* Soft ambient glow orbs layered on top */
 body::after {
     content: "";
     position: fixed;
-    bottom: -20%;
-    right: -10%;
-    width: 50%;
-    height: 50%;
+    top: 50%;
+    left: 50%;
+    width: 80%;
+    height: 80%;
+    transform: translate(-50%, -50%);
     background: radial-gradient(
-        circle,
-        rgba(var(--accent), 0.12) 0%,
-        transparent 70%
+        ellipse at 30% 30%,
+        rgba(var(--primary), 0.12) 0%,
+        transparent 50%
+    ),
+    radial-gradient(
+        ellipse at 70% 70%,
+        rgba(var(--accent), 0.1) 0%,
+        transparent 50%
     );
     pointer-events: none;
     z-index: 0;
-    animation: floatOrb2 18s ease-in-out infinite;
+    animation: breatheGlow 15s ease-in-out infinite;
 }
 
-@keyframes floatOrb1 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(10%, 10%) scale(1.1); }
+@keyframes rainScroll {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 200px; }
 }
 
-@keyframes floatOrb2 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(-10%, -10%) scale(1.15); }
+@keyframes breatheGlow {
+    0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
 }
 
 .label {
