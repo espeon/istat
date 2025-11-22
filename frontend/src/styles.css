@@ -120,7 +120,7 @@ body {
     position: relative;
 }
 
-/* Grid pattern background layer */
+/* Layer 1: Grid pattern */
 body::before {
     content: "";
     position: fixed;
@@ -129,14 +129,14 @@ body::before {
     width: 100%;
     height: 100%;
     background-image:
-        linear-gradient(rgba(var(--primary), 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(var(--primary), 0.03) 1px, transparent 1px);
+        linear-gradient(rgba(var(--primary), 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--primary), 0.05) 1px, transparent 1px);
     background-size: 50px 50px;
     pointer-events: none;
-    z-index: 0;
+    z-index: 1;
 }
 
-/* Rain texture layer */
+/* Layer 2: Rain texture */
 body::after {
     content: "";
     position: fixed;
@@ -146,13 +146,18 @@ body::after {
     height: 100%;
     background-image: url("/rain.gif");
     background-size: 200px 200px;
-    opacity: 0.35;
+    opacity: 0.5;
     pointer-events: none;
-    z-index: 1;
+    z-index: 2;
     mix-blend-mode: overlay;
 }
 
-/* Glow orbs using a separate element */
+/* Layer 3: Glow orbs - needs to be on a higher layer */
+#app {
+    position: relative;
+    z-index: 10;
+}
+
 #app::before {
     content: "";
     position: fixed;
@@ -163,16 +168,16 @@ body::after {
     transform: translate(-50%, -50%);
     background: radial-gradient(
         ellipse at 30% 30%,
-        rgba(var(--primary), 0.15) 0%,
+        rgba(var(--primary), 0.2) 0%,
         transparent 50%
     ),
     radial-gradient(
         ellipse at 70% 70%,
-        rgba(var(--accent), 0.12) 0%,
+        rgba(var(--accent), 0.15) 0%,
         transparent 50%
     );
     pointer-events: none;
-    z-index: 0;
+    z-index: 3;
     animation: breatheGlow 15s ease-in-out infinite;
 }
 
