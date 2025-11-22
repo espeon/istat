@@ -103,10 +103,10 @@ html {
     font-size: 15px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: linear-gradient(
-        135deg,
+    background: radial-gradient(
+        ellipse at top,
         rgb(var(--background-gradient-start)) 0%,
-        rgb(var(--background)) 50%,
+        rgb(var(--background)) 40%,
         rgb(var(--background-gradient-end)) 100%
     );
     background-attachment: fixed;
