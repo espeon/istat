@@ -110,11 +110,12 @@ export function StatusCard({ status, index, onModerated }: StatusCardProps) {
     if (!confirm("Delete this status? This cannot be undone.")) return;
 
     try {
+      // Construct AT-URI from did and rkey
+      const uri = `at://${status.did}/vg.nat.istat.status.record/${status.rkey}`;
       await ok(
         client.post("vg.nat.istat.status.deleteStatus", {
           data: {
-            did: status.did,
-            rkey: status.rkey,
+            uri,
           },
         })
       );
