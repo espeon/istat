@@ -25,13 +25,16 @@ export function Header({ isScrolled }: HeaderProps) {
         <div className="flex items-center justify-center">
           <Link to="/" className="group">
             <h1
-              className={`font-sans uppercase tracking-widest transition-all duration-500 ${
-                isScrolled ? "text-xs" : "text-sm"
+              className={`font-cursive transition-all duration-500 ${
+                isScrolled ? "text-2xl" : "text-3xl"
               }`}
               style={{
-                color: "rgb(var(--foreground))",
-                fontWeight: 400,
-                letterSpacing: "0.3em",
+                background: `linear-gradient(135deg, rgb(var(--primary)) 0%, rgb(var(--accent)) 100%)`,
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                fontWeight: 500,
+                filter: "drop-shadow(0 2px 8px rgba(var(--primary), 0.3))",
               }}
             >
               nyt
