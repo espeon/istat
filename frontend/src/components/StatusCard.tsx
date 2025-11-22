@@ -44,13 +44,12 @@ export function StatusCard({ status, index }: StatusCardProps) {
     return (
       <article
         key="status-card"
-        className="status-card p-4 bg-[rgb(var(--card))] border"
+        className="status-card p-6 bg-[rgb(var(--card))]"
         style={{
           animationDelay: `${index * 50}ms`,
-          borderColor: "rgb(var(--border))",
         }}
       >
-        <div className="flex gap-4">
+        <div className="flex gap-4 ml-8">
           {/* emoji */}
           <div className="shrink-0">
             <div className="text-2xl text-[rgb(var(--muted))] w-20 h-20 flex justify-center items-center">
@@ -70,13 +69,12 @@ export function StatusCard({ status, index }: StatusCardProps) {
   return (
     <article
       key="status-card"
-      className="status-card p-4 bg-[rgb(var(--card))] border"
+      className="status-card p-6 bg-[rgb(var(--card))]"
       style={{
         animationDelay: `${index * 50}ms`,
-        borderColor: "rgb(var(--border))",
       }}
     >
-      <div className="flex gap-4">
+      <div className="flex gap-6 ml-8">
         {/* emoji */}
         <div className="shrink-0 max-h-20">
           {!imageError ? (

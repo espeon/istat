@@ -109,7 +109,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[rgb(var(--background))]">
+    <div className="min-h-screen bg-[rgb(var(--background))] relative">
       <Header isScrolled={isScrolled} />
 
       {isLoggedIn ? (
@@ -129,7 +129,7 @@ function App() {
         />
       )}
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main className="max-w-4xl mx-auto px-6 py-12 relative z-10">
         <StatusFeed
           statuses={statuses}
           loading={loadingStatuses}
@@ -142,10 +142,10 @@ function App() {
         <>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="fab-glow fixed bottom-8 right-8 w-14 h-14 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] rounded-full flex items-center justify-center"
+            className="fab-glow fixed bottom-8 right-8 w-16 h-16 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] rounded-full flex items-center justify-center z-50"
             aria-label="new status"
           >
-            <SquarePen className="w-6 h-6" />
+            <SquarePen className="w-7 h-7" />
           </button>
           <SubmitModal
             isOpen={isModalOpen}

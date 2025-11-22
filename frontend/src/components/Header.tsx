@@ -9,48 +9,57 @@ interface HeaderProps {
 export function Header({ isScrolled }: HeaderProps) {
   return (
     <header
-      className={`backdrop-blur-xl sticky top-0 z-50 border-b flex items-center transition-all duration-500 ${
-        isScrolled ? "shadow-lg h-14" : "h-16"
+      className={`sticky top-0 z-50 border-b-4 flex items-center transition-all duration-300 ${
+        isScrolled ? "h-16" : "h-20"
       }`}
       style={{
-        borderColor: isScrolled
-          ? "rgba(var(--border), 0.6)"
-          : "transparent",
-        background: isScrolled
-          ? "rgba(var(--card), 0.8)"
-          : "rgba(var(--card), 0.3)",
+        borderColor: "rgb(var(--border))",
+        background: "rgb(var(--background))",
         boxShadow: isScrolled
-          ? "0 4px 12px -2px rgba(var(--accent), 0.08)"
+          ? "0 4px 0 rgb(var(--primary))"
           : "none",
       }}
     >
       <div className="max-w-4xl mx-auto px-6 py-2 relative flex-1">
-        <div className="flex items-center justify-center">
-          <Link to="/" className="text-base truncate group">
+        {/* Bold accent block */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-2 transition-all duration-300"
+          style={{
+            background: `linear-gradient(180deg, rgb(var(--primary)) 0%, rgb(var(--accent)) 100%)`,
+            width: isScrolled ? "4px" : "2px",
+          }}
+        />
+
+        <div className="flex items-center justify-between">
+          <Link to="/" className="group flex items-center gap-3">
             <h1
-              className={`font-cursive text-[rgb(var(--foreground))] transition-all duration-500 relative ${
-                isScrolled ? "text-2xl" : "text-3xl"
+              className={`font-cursive text-[rgb(var(--foreground))] transition-all duration-300 tracking-tight ${
+                isScrolled ? "text-3xl" : "text-5xl"
               }`}
               style={{
-                textShadow: "0 0 20px rgba(var(--accent), 0.15)",
+                fontWeight: 600,
+                letterSpacing: "-0.02em",
               }}
             >
-              <span className="relative">
-                nyt.one
+              <span className="relative inline-block">
+                nyt
+                {/* Underline accent */}
                 <span
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  className="absolute bottom-0 left-0 h-1 bg-[rgb(var(--primary))] transition-all duration-300 group-hover:h-2"
                   style={{
-                    textShadow: "0 0 30px rgba(var(--accent-glow), 0.4)",
+                    width: "100%",
                   }}
-                >
-                  nyt.one
-                </span>
+                />
               </span>
             </h1>
+            <span className="text-xs uppercase tracking-wider text-[rgb(var(--muted-foreground))] font-sans mt-2">
+              Status
+            </span>
           </Link>
-        </div>
-        <div className="absolute right-6 top-1/2 -translate-y-1/2">
-          <ThemeToggle />
+
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </header>
