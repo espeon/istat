@@ -1,0 +1,23 @@
+{
+  "lexicon": 1,
+  "id": "vg.nat.istat.moderation.isAdmin",
+  "defs": {
+    "main": {
+      "type": "query",
+      "description": "Check if the current user is an admin",
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["isAdmin"],
+          "properties": {
+            "isAdmin": {
+              "type": "boolean",
+              "description": "Whether the current user is an admin"
+            }
+          }
+        }
+      }
+    }
+  }
+}

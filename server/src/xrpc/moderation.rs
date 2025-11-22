@@ -1,0 +1,343 @@
+use axum::{
+    extract::{Request, State},
+    http::{HeaderMap, StatusCode},
+    Json,
+};
+use jacquard_oatproxy::auth::{extract_bearer_token, validate_proxy_jwt};
+use serde::{Deserialize, Serialize};
+use sqlx::Row;
+use std::env;
+
+use crate::AppState;
+
+/// Extract DID from Authorization header by validating JWT
+async fn extract_authenticated_did(
+    headers: &HeaderMap,
+    state: &AppState,
+) -> Result<String, StatusCode> {
+    let auth_header = headers
+        .get("authorization")
+        .and_then(|h| h.to_str().ok())
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+
+    let token =
+        extract_bearer_token(auth_header).ok_or(StatusCode::UNAUTHORIZED)?;
+
+    // Get expected issuer from environment or use default
+    let issuer = env::var("OAUTH_ISSUER")
+        .unwrap_or_else(|_| "http://localhost:3001".to_string());
+
+    let claims = validate_proxy_jwt(token, &state.key_store, &issuer)
+        .await
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+
+    Ok(claims.sub)
+}
+
+/// Check if a DID is an admin
+async fn is_admin(did: &str, state: &AppState) -> Result<bool, StatusCode> {
+    // First check if this DID matches the initial admin from env var
+    if let Ok(initial_admin) = env::var("ADMIN_DID") {
+        if did == initial_admin {
+            // Ensure this DID is in the admins table
+            sqlx::query("INSERT OR IGNORE INTO admins (did, granted_by, notes) VALUES (?, NULL, ?)")
+                .bind(did)
+                .bind("Initial admin from environment variable")
+                .execute(&state.db)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            return Ok(true);
+        }
+    }
+
+    // Check database
+    let exists = sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM admins WHERE did = ?)")
+        .bind(did)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(exists)
+}
+
+/// Require that the authenticated user is an admin
+async fn require_admin(headers: &HeaderMap, state: &AppState) -> Result<String, StatusCode> {
+    let did = extract_authenticated_did(headers, state).await?;
+
+    if !is_admin(&did, state).await? {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    Ok(did)
+}
+
+// Request/Response types
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlacklistCidRequest {
+    pub cid: String,
+    pub reason: String,
+    pub reason_details: Option<String>,
+    pub content_type: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BlacklistCidResponse {
+    pub success: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoveBlacklistRequest {
+    pub cid: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RemoveBlacklistResponse {
+    pub success: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlacklistedCidView {
+    pub cid: String,
+    pub reason: String,
+    pub reason_details: Option<String>,
+    pub content_type: String,
+    pub moderator_did: String,
+    pub blacklisted_at: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ListBlacklistedResponse {
+    pub blacklisted: Vec<BlacklistedCidView>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IsAdminResponse {
+    pub is_admin: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteEmojiRequest {
+    pub uri: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeleteEmojiResponse {
+    pub success: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteStatusRequest {
+    pub uri: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeleteStatusResponse {
+    pub success: bool,
+}
+
+// Endpoint handlers
+
+pub async fn handle_blacklist_cid(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(req): Json<BlacklistCidRequest>,
+) -> Result<Json<BlacklistCidResponse>, StatusCode> {
+    let moderator_did = require_admin(&headers, &state).await?;
+
+    // Validate reason
+    let valid_reasons = ["nudity", "gore", "harassment", "spam", "copyright", "other"];
+    if !valid_reasons.contains(&req.reason.as_str()) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Validate content_type
+    let valid_content_types = ["emoji_blob", "avatar", "banner"];
+    if !valid_content_types.contains(&req.content_type.as_str()) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Check if already blacklisted
+    let exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM blacklisted_cids WHERE cid = ?)",
+    )
+    .bind(&req.cid)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if exists {
+        return Err(StatusCode::CONFLICT);
+    }
+
+    // Insert blacklist entry
+    sqlx::query(
+        r#"
+        INSERT INTO blacklisted_cids (cid, reason, reason_details, content_type, moderator_did)
+        VALUES (?, ?, ?, ?, ?)
+        "#,
+    )
+    .bind(&req.cid)
+    .bind(&req.reason)
+    .bind(&req.reason_details)
+    .bind(&req.content_type)
+    .bind(&moderator_did)
+    .execute(&state.db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(BlacklistCidResponse { success: true }))
+}
+
+pub async fn handle_remove_blacklist(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(req): Json<RemoveBlacklistRequest>,
+) -> Result<Json<RemoveBlacklistResponse>, StatusCode> {
+    let _ = require_admin(&headers, &state).await?;
+
+    let result = sqlx::query("DELETE FROM blacklisted_cids WHERE cid = ?")
+        .bind(&req.cid)
+        .execute(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if result.rows_affected() == 0 {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    Ok(Json(RemoveBlacklistResponse { success: true }))
+}
+
+pub async fn handle_list_blacklisted(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<ListBlacklistedResponse>, StatusCode> {
+    let _ = require_admin(&headers, &state).await?;
+
+    let rows = sqlx::query(
+        r#"
+        SELECT cid, reason, reason_details, content_type, moderator_did, blacklisted_at
+        FROM blacklisted_cids
+        ORDER BY blacklisted_at DESC
+        LIMIT 100
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let blacklisted: Vec<BlacklistedCidView> = rows
+        .iter()
+        .filter_map(|row| {
+            Some(BlacklistedCidView {
+                cid: row.try_get("cid").ok()?,
+                reason: row.try_get("reason").ok()?,
+                reason_details: row.try_get("reason_details").ok().flatten(),
+                content_type: row.try_get("content_type").ok()?,
+                moderator_did: row.try_get("moderator_did").ok()?,
+                blacklisted_at: row.try_get("blacklisted_at").ok()?,
+            })
+        })
+        .collect();
+
+    Ok(Json(ListBlacklistedResponse { blacklisted }))
+}
+
+pub async fn handle_is_admin(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<IsAdminResponse>, StatusCode> {
+    let did = extract_authenticated_did(&headers, &state).await?;
+    let admin = is_admin(&did, &state).await?;
+
+    Ok(Json(IsAdminResponse { is_admin: admin }))
+}
+
+pub async fn handle_delete_emoji(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(req): Json<DeleteEmojiRequest>,
+) -> Result<Json<DeleteEmojiResponse>, StatusCode> {
+    let did = extract_authenticated_did(&headers, &state).await?;
+    let is_admin_user = is_admin(&did, &state).await?;
+
+    // Parse AT-URI to get DID and rkey
+    // Format: at://did:plc:xyz/vg.nat.istat.moji.emoji/rkey
+    let uri_parts: Vec<&str> = req.uri.strip_prefix("at://").unwrap_or(&req.uri).split('/').collect();
+    if uri_parts.len() < 3 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let emoji_did = uri_parts[0];
+    let _collection = uri_parts[1];
+    let rkey = uri_parts[2];
+
+    // Check if user owns this emoji or is an admin
+    if did != emoji_did && !is_admin_user {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    // Soft delete the emoji
+    let at_uri_without_prefix = format!("{}/vg.nat.istat.moji.emoji/{}", emoji_did, rkey);
+    let result = sqlx::query(
+        "UPDATE emojis SET deleted_at = datetime('now'), deleted_by = ? WHERE at = ? AND deleted_at IS NULL"
+    )
+    .bind(&did)
+    .bind(&at_uri_without_prefix)
+    .execute(&state.db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if result.rows_affected() == 0 {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    Ok(Json(DeleteEmojiResponse { success: true }))
+}
+
+pub async fn handle_delete_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(req): Json<DeleteStatusRequest>,
+) -> Result<Json<DeleteStatusResponse>, StatusCode> {
+    let did = extract_authenticated_did(&headers, &state).await?;
+    let is_admin_user = is_admin(&did, &state).await?;
+
+    // Parse AT-URI to get DID and rkey
+    // Format: at://did:plc:xyz/vg.nat.istat.status.record/rkey
+    let uri_parts: Vec<&str> = req.uri.strip_prefix("at://").unwrap_or(&req.uri).split('/').collect();
+    if uri_parts.len() < 3 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let status_did = uri_parts[0];
+    let _collection = uri_parts[1];
+    let rkey = uri_parts[2];
+
+    // Check if user owns this status or is an admin
+    if did != status_did && !is_admin_user {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    // Soft delete the status
+    let at_uri_without_prefix = format!("{}/vg.nat.istat.status.record/{}", status_did, rkey);
+    let result = sqlx::query(
+        "UPDATE statuses SET deleted_at = datetime('now'), deleted_by = ? WHERE at = ? AND deleted_at IS NULL"
+    )
+    .bind(&did)
+    .bind(&at_uri_without_prefix)
+    .execute(&state.db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if result.rows_affected() == 0 {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    Ok(Json(DeleteStatusResponse { success: true }))
+}
