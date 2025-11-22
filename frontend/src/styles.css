@@ -145,11 +145,25 @@ body::after {
     width: 100%;
     height: 100%;
     background-image: url("/rain.gif");
-    background-size: 200px 200px;
+    background-size: 150px 150px;
     opacity: 0.5;
     pointer-events: none;
     z-index: 2;
     mix-blend-mode: overlay;
+    mask-image: radial-gradient(
+        ellipse at center,
+        transparent 0%,
+        rgba(0, 0, 0, 0.3) 20%,
+        rgba(0, 0, 0, 0.8) 60%,
+        black 100%
+    );
+    -webkit-mask-image: radial-gradient(
+        ellipse at center,
+        transparent 0%,
+        rgba(0, 0, 0, 0.3) 20%,
+        rgba(0, 0, 0, 0.8) 60%,
+        black 100%
+    );
 }
 
 /* Layer 3: Glow orbs - needs to be on a higher layer */
