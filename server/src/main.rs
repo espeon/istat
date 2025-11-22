@@ -268,6 +268,10 @@ async fn main() -> Result<()> {
             axum::routing::get(xrpc::moderation::handle_list_blacklisted),
         )
         .route(
+            "/xrpc/vg.nat.istat.moderation.listAuditLog",
+            axum::routing::get(xrpc::moderation::handle_list_audit_log),
+        )
+        .route(
             "/xrpc/vg.nat.istat.moderation.isAdmin",
             axum::routing::get(xrpc::moderation::handle_is_admin),
         )

@@ -71,6 +71,39 @@ async fn require_admin(headers: &HeaderMap, state: &AppState) -> Result<String, 
     Ok(did)
 }
 
+/// Log a moderation action to the audit log
+async fn log_audit_action(
+    state: &AppState,
+    moderator_did: &str,
+    action: &str,
+    target_type: &str,
+    target_id: &str,
+    reason: Option<&str>,
+    reason_details: Option<&str>,
+) -> Result<(), StatusCode> {
+    sqlx::query(
+        r#"
+        INSERT INTO moderation_audit_log
+            (moderator_did, action, target_type, target_id, reason, reason_details)
+        VALUES (?, ?, ?, ?, ?, ?)
+        "#,
+    )
+    .bind(moderator_did)
+    .bind(action)
+    .bind(target_type)
+    .bind(target_id)
+    .bind(reason)
+    .bind(reason_details)
+    .execute(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Failed to log audit action: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(())
+}
+
 // Request/Response types
 
 #[derive(Debug, Deserialize)]
@@ -190,6 +223,18 @@ pub async fn handle_blacklist_cid(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    // Log audit action
+    log_audit_action(
+        &state,
+        &moderator_did,
+        "blacklist_cid",
+        &req.content_type,
+        &req.cid,
+        Some(&req.reason),
+        req.reason_details.as_deref(),
+    )
+    .await?;
+
     Ok(Json(BlacklistCidResponse { success: true }))
 }
 
@@ -198,7 +243,18 @@ pub async fn handle_remove_blacklist(
     headers: HeaderMap,
     Json(req): Json<RemoveBlacklistRequest>,
 ) -> Result<Json<RemoveBlacklistResponse>, StatusCode> {
-    let _ = require_admin(&headers, &state).await?;
+    let moderator_did = require_admin(&headers, &state).await?;
+
+    // Get the content_type before deleting so we can log it
+    let content_type: Option<String> = sqlx::query_scalar(
+        "SELECT content_type FROM blacklisted_cids WHERE cid = ?"
+    )
+    .bind(&req.cid)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let content_type = content_type.ok_or(StatusCode::NOT_FOUND)?;
 
     let result = sqlx::query("DELETE FROM blacklisted_cids WHERE cid = ?")
         .bind(&req.cid)
@@ -209,6 +265,18 @@ pub async fn handle_remove_blacklist(
     if result.rows_affected() == 0 {
         return Err(StatusCode::NOT_FOUND);
     }
+
+    // Log audit action
+    log_audit_action(
+        &state,
+        &moderator_did,
+        "remove_blacklist",
+        &content_type,
+        &req.cid,
+        None,
+        None,
+    )
+    .await?;
 
     Ok(Json(RemoveBlacklistResponse { success: true }))
 }
@@ -297,6 +365,18 @@ pub async fn handle_delete_emoji(
         return Err(StatusCode::NOT_FOUND);
     }
 
+    // Log audit action
+    log_audit_action(
+        &state,
+        &did,
+        "delete_emoji",
+        "emoji",
+        &req.uri,
+        None,
+        None,
+    )
+    .await?;
+
     Ok(Json(DeleteEmojiResponse { success: true }))
 }
 
@@ -339,5 +419,88 @@ pub async fn handle_delete_status(
         return Err(StatusCode::NOT_FOUND);
     }
 
+    // Log audit action
+    log_audit_action(
+        &state,
+        &did,
+        "delete_status",
+        "status",
+        &req.uri,
+        None,
+        None,
+    )
+    .await?;
+
     Ok(Json(DeleteStatusResponse { success: true }))
 }
+
+use lexicons::vg_nat::istat::moderation::list_audit_log::{AuditLogEntry, ListAuditLogOutput};
+
+pub async fn handle_list_audit_log(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<ListAuditLogOutput<'static>>, StatusCode> {
+    let _ = require_admin(&headers, &state).await?;
+
+    let rows = sqlx::query(
+        r#"
+        SELECT 
+            l.id, 
+            l.moderator_did, 
+            l.action, 
+            l.target_type, 
+            l.target_id,
+            l.reason,
+            l.reason_details,
+            l.created_at,
+            p.handle as moderator_handle
+        FROM moderation_audit_log l
+        LEFT JOIN profiles p ON l.moderator_did = p.did
+        ORDER BY l.created_at DESC
+        LIMIT 100
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    use jacquard_common::types::string::{Datetime, Did, Handle};
+
+    let entries: Vec<_> = rows
+        .iter()
+        .filter_map(|row| {
+            let id: i64 = row.try_get("id").ok()?;
+            let moderator_did: String = row.try_get("moderator_did").ok()?;
+            let action: String = row.try_get("action").ok()?;
+            let target_type: String = row.try_get("target_type").ok()?;
+            let target_id: String = row.try_get("target_id").ok()?;
+            let reason: Option<String> = row.try_get("reason").ok().flatten();
+            let reason_details: Option<String> = row.try_get("reason_details").ok().flatten();
+            let created_at: String = row.try_get("created_at").ok()?;
+            let moderator_handle: Option<String> = row.try_get("moderator_handle").ok().flatten();
+
+            Some(
+                AuditLogEntry::new()
+                    .id(id)
+                    .moderator_did(Did::from_str(&moderator_did).ok()?)
+                    .maybe_moderator_handle(moderator_handle.and_then(|h| Handle::from_str(&h).ok()))
+                    .action(action)
+                    .target_type(target_type)
+                    .target_id(target_id)
+                    .maybe_reason(reason.map(Into::into))
+                    .maybe_reason_details(reason_details.map(Into::into))
+                    .created_at(Datetime::raw_str(created_at))
+                    .build(),
+            )
+        })
+        .collect();
+
+    let output = ListAuditLogOutput {
+        entries,
+        cursor: None,
+        extra_data: None,
+    };
+
+    Ok(Json(output))
+}
+

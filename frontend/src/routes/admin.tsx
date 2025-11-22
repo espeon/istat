@@ -20,6 +20,18 @@ interface BlacklistedCid {
   blacklistedAt: string;
 }
 
+interface AuditLogEntry {
+  id: number;
+  moderatorDid: string;
+  moderatorHandle?: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  reason?: string;
+  reasonDetails?: string;
+  createdAt: string;
+}
+
 const REASONS = [
   { value: "nudity", label: "Nudity" },
   { value: "gore", label: "Gore/Violence" },
@@ -45,6 +57,8 @@ function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [blacklisted, setBlacklisted] = useState<BlacklistedCid[]>([]);
   const [loadingList, setLoadingList] = useState(true);
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+  const [loadingAudit, setLoadingAudit] = useState(true);
 
   // Search/filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,6 +79,7 @@ function AdminPanel() {
   useEffect(() => {
     if (isAdmin) {
       fetchBlacklisted();
+      fetchAuditLog();
     }
   }, [isAdmin]);
 
@@ -143,6 +158,21 @@ function AdminPanel() {
     }
   };
 
+  const fetchAuditLog = async () => {
+    setLoadingAudit(true);
+    try {
+      const data = await ok(
+        client.get("vg.nat.istat.moderation.listAuditLog", {}),
+      );
+      setAuditLog(data.entries);
+    } catch (err) {
+      console.error("Failed to fetch audit log:", err);
+      toast.error("Failed to load audit log");
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
+
   const handleBlacklist = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -168,6 +198,7 @@ function AdminPanel() {
       setCid("");
       setReasonDetails("");
       fetchBlacklisted();
+      fetchAuditLog();
     } catch (err) {
       console.error("Failed to blacklist CID:", err);
       toast.error(
@@ -188,6 +219,7 @@ function AdminPanel() {
 
       toast.success("Blacklist removed successfully");
       fetchBlacklisted();
+      fetchAuditLog();
     } catch (err) {
       console.error("Failed to remove blacklist:", err);
       toast.error(
@@ -546,6 +578,117 @@ function AdminPanel() {
                   >
                     <Trash2 size={16} />
                   </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Audit Log Section */}
+        <div
+          className="rounded-2xl border p-8 mt-8"
+          style={{
+            background: "rgba(var(--card), 0.4)",
+            borderColor: "rgba(var(--border), 0.3)",
+            backdropFilter: "blur(20px)",
+          }}
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <Shield className="text-[rgb(var(--primary))]" size={24} />
+            <h2
+              className="text-2xl"
+              style={{ fontFamily: "EB Garamond", fontWeight: 600 }}
+            >
+              Moderation Audit Log
+            </h2>
+          </div>
+
+          {loadingAudit ? (
+            <div className="flex justify-center py-12">
+              <div className="loading-spinner" />
+            </div>
+          ) : auditLog.length === 0 ? (
+            <p className="text-center py-12 text-[rgb(var(--muted-foreground))]">
+              No moderation actions recorded yet
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {auditLog.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-start gap-4 p-4 rounded-lg border"
+                  style={{
+                    background: "rgba(var(--background), 0.5)",
+                    borderColor: "rgba(var(--border), 0.3)",
+                  }}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="px-2 py-1 text-xs rounded-full font-medium"
+                        style={{
+                          background: entry.action.includes("delete")
+                            ? "rgba(var(--destructive), 0.2)"
+                            : entry.action.includes("remove")
+                            ? "rgba(var(--accent), 0.2)"
+                            : "rgba(var(--primary), 0.2)",
+                          color: entry.action.includes("delete")
+                            ? "rgb(var(--destructive))"
+                            : entry.action.includes("remove")
+                            ? "rgb(var(--accent))"
+                            : "rgb(var(--primary))",
+                        }}
+                      >
+                        {entry.action.replace(/_/g, " ")}
+                      </span>
+                      <span
+                        className="px-2 py-1 text-xs rounded-full"
+                        style={{
+                          background: "rgba(var(--muted), 0.2)",
+                          color: "rgb(var(--muted-foreground))",
+                        }}
+                      >
+                        {entry.targetType.replace(/_/g, " ")}
+                      </span>
+                      {entry.reason && (
+                        <span
+                          className="px-2 py-1 text-xs rounded-full"
+                          style={{
+                            background: "rgba(var(--accent), 0.2)",
+                            color: "rgb(var(--accent))",
+                          }}
+                        >
+                          {entry.reason}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-[rgb(var(--foreground))] mb-1">
+                      <span className="text-[rgb(var(--muted-foreground))]">
+                        Target:
+                      </span>{" "}
+                      <code className="font-mono text-xs">
+                        {entry.targetId.length > 60
+                          ? entry.targetId.substring(0, 60) + "..."
+                          : entry.targetId}
+                      </code>
+                    </p>
+                    {entry.reasonDetails && (
+                      <p className="text-xs text-[rgb(var(--muted-foreground))] mb-2">
+                        {entry.reasonDetails}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 text-xs text-[rgb(var(--muted-foreground))]">
+                      <span>
+                        {entry.moderatorHandle
+                          ? `@${entry.moderatorHandle}`
+                          : entry.moderatorDid.substring(0, 20) + "..."}
+                      </span>
+                      <span>•</span>
+                      <span>
+                        {new Date(entry.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
