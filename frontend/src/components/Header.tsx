@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "../lib/theme";
 import { Link } from "@tanstack/react-router";
+import { Shield } from "lucide-react";
+import { useIsAdmin } from "../lib/useIsAdmin";
 
 interface HeaderProps {
   isScrolled: boolean;
 }
 
 export function Header({ isScrolled }: HeaderProps) {
+  const { isAdmin } = useIsAdmin();
+
   return (
     <header
       className={`sticky top-0 z-50 flex items-center transition-all duration-500 ${
@@ -41,7 +45,22 @@ export function Header({ isScrolled }: HeaderProps) {
             </h1>
           </Link>
         </div>
-        <div className="absolute right-8 top-1/2 -translate-y-1/2">
+        <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-3">
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full transition-all duration-200 hover:-translate-y-0.5"
+              style={{
+                background: "rgba(var(--primary), 0.2)",
+                color: "rgb(var(--primary))",
+                border: "1px solid rgba(var(--primary), 0.3)",
+              }}
+              title="Moderation Panel"
+            >
+              <Shield size={14} />
+              <span className="font-serif">admin</span>
+            </Link>
+          )}
           <ThemeToggle />
         </div>
       </div>
