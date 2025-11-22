@@ -142,7 +142,7 @@ function App() {
         <>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="fixed bottom-8 right-8 w-14 h-14 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center"
+            className="fab-glow fixed bottom-8 right-8 w-14 h-14 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] rounded-full flex items-center justify-center"
             aria-label="new status"
           >
             <SquarePen className="w-6 h-6" />

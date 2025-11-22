@@ -11,69 +11,77 @@
     --radius: 0rem;
 }
 
-/* Light theme (default) */
+/* Light theme (default) - New Dawn Aesthetic */
 :root,
 [data-theme="light"] {
-    /* Colors */
-    --background: 250 248 248;
-    --foreground: 26 26 26;
+    /* Colors - Natural earth tones with fresh accents */
+    --background: 250 248 245;
+    --background-gradient-start: 250 248 245;
+    --background-gradient-end: 240 245 243;
+    --foreground: 26 58 46;
 
     --card: 255 255 255;
-    --card-foreground: 26 26 26;
+    --card-foreground: 26 58 46;
 
     --popover: 255 255 255;
-    --popover-foreground: 26 26 26;
+    --popover-foreground: 26 58 46;
 
-    --primary: 44 44 44;
+    --primary: 26 58 46;
     --primary-foreground: 255 255 255;
 
-    --secondary: 229 229 224;
-    --secondary-foreground: 26 26 26;
+    --secondary: 168 184 160;
+    --secondary-foreground: 26 58 46;
 
-    --muted: 229 229 224;
-    --muted-foreground: 107 107 107;
+    --muted: 240 242 238;
+    --muted-foreground: 100 120 110;
 
-    --accent: 139 115 85;
+    --accent: 212 112 74;
     --accent-foreground: 255 255 255;
 
-    --destructive: 220 38 38;
+    --destructive: 196 64 48;
     --destructive-foreground: 255 255 255;
 
-    --border: 229 229 224;
-    --input: 229 229 224;
-    --ring: 44 44 44;
+    --border: 220 228 216;
+    --input: 220 228 216;
+    --ring: 26 58 46;
+
+    --accent-glow: 212 112 74;
 }
 
-/* Dark theme */
+/* Dark theme - Midnight Forest Aesthetic */
 [data-theme="dark"] {
-    /* Colors */
-    --background: 15 15 15;
-    --foreground: 232 232 232;
+    /* Colors - Deep forest with electric accents */
+    --background: 15 20 16;
+    --background-gradient-start: 15 20 16;
+    --background-gradient-end: 26 31 28;
+    --foreground: 225 240 230;
 
-    --card: 26 26 26;
-    --card-foreground: 232 232 232;
+    --card: 26 34 30;
+    --card-foreground: 225 240 230;
 
-    --popover: 26 26 26;
-    --popover-foreground: 232 232 232;
+    --popover: 26 34 30;
+    --popover-foreground: 225 240 230;
 
-    --primary: 232 232 232;
-    --primary-foreground: 15 15 15;
+    --primary: 110 255 196;
+    --primary-foreground: 15 20 16;
 
-    --secondary: 42 42 42;
-    --secondary-foreground: 232 232 232;
+    --secondary: 44 87 78;
+    --secondary-foreground: 225 240 230;
 
-    --muted: 42 42 42;
-    --muted-foreground: 160 160 160;
+    --muted: 35 45 40;
+    --muted-foreground: 140 160 150;
 
-    --accent: 184 148 122;
-    --accent-foreground: 15 15 15;
+    --accent: 232 155 95;
+    --accent-foreground: 15 20 16;
 
-    --destructive: 239 68 68;
-    --destructive-foreground: 15 15 15;
+    --destructive: 239 88 88;
+    --destructive-foreground: 15 20 16;
 
-    --border: 42 42 42;
-    --input: 42 42 42;
-    --ring: 232 232 232;
+    --border: 44 60 52;
+    --input: 44 60 52;
+    --ring: 110 255 196;
+
+    --accent-glow: 110 255 196;
 }
 
 * {
@@ -93,9 +101,33 @@ html {
     font-size: 15px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: rgb(var(--background));
+    background: linear-gradient(
+        135deg,
+        rgb(var(--background-gradient-start)) 0%,
+        rgb(var(--background-gradient-end)) 100%
+    );
+    background-attachment: fixed;
     color: rgb(var(--foreground));
     line-height: 1.5;
+    min-height: 100vh;
+}
+
+body {
+    position: relative;
+}
+
+/* Ambient grain texture overlay */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='2.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 0;
 }
 
 .label {
@@ -123,18 +155,40 @@ html {
 
 /* status card animation */
 .status-card {
-    animation: fadeInUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-    transition: all 0.2s ease;
+    animation: fadeInUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
 }
 
 .status-card:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px -4px rgba(var(--accent), 0.15);
+}
+
+.status-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid transparent;
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent), 0.08) 0%,
+        transparent 50%,
+        rgba(var(--primary), 0.04) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.status-card:hover::before {
+    opacity: 1;
 }
 
 @keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(30px);
     }
     to {
         opacity: 1;
@@ -186,13 +240,83 @@ a:focus-visible {
     background: rgb(var(--card));
     color: rgb(var(--foreground));
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 14px;
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-toggle::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(var(--accent), 0.1), rgba(var(--primary), 0.1));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.theme-toggle:hover::before {
+    opacity: 1;
 }
 
 .theme-toggle:hover {
-    border-color: rgb(var(--primary));
+    border-color: rgb(var(--accent));
+    transform: scale(1.05);
+}
+
+/* Floating action button with glow */
+.fab-glow {
+    position: relative;
+    box-shadow: 0 4px 12px rgba(var(--accent-glow), 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fab-glow:hover {
+    box-shadow: 0 6px 20px rgba(var(--accent-glow), 0.5);
+    transform: scale(1.1);
+}
+
+.fab-glow::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(var(--accent), 0.5), rgba(var(--primary), 0.5));
+    filter: blur(8px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+.fab-glow:hover::before {
+    opacity: 0.6;
+}
+
+/* Page load animation */
+@keyframes pageLoad {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.page-animate {
+    animation: pageLoad 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Button press animation */
+button:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+/* Input focus glow */
+input:focus-visible {
+    box-shadow: 0 0 0 3px rgba(var(--accent), 0.1);
 }
