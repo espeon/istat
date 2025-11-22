@@ -120,8 +120,24 @@ body {
     position: relative;
 }
 
-/* Animated rain texture background */
+/* Grid pattern background layer */
 body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image:
+        linear-gradient(rgba(var(--primary), 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--primary), 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Rain texture layer */
+body::after {
     content: "";
     position: fixed;
     top: 0;
@@ -130,14 +146,14 @@ body::before {
     height: 100%;
     background-image: url("/rain.gif");
     background-size: 200px 200px;
-    opacity: 0.4;
+    opacity: 0.35;
     pointer-events: none;
-    z-index: 0;
+    z-index: 1;
     mix-blend-mode: overlay;
 }
 
-/* Soft ambient glow orbs layered on top */
-body::after {
+/* Glow orbs using a separate element */
+#app::before {
     content: "";
     position: fixed;
     top: 50%;
@@ -147,12 +163,12 @@ body::after {
     transform: translate(-50%, -50%);
     background: radial-gradient(
         ellipse at 30% 30%,
-        rgba(var(--primary), 0.12) 0%,
+        rgba(var(--primary), 0.15) 0%,
         transparent 50%
     ),
     radial-gradient(
         ellipse at 70% 70%,
-        rgba(var(--accent), 0.1) 0%,
+        rgba(var(--accent), 0.12) 0%,
         transparent 50%
     );
     pointer-events: none;
