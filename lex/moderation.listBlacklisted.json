@@ -1,0 +1,81 @@
+{
+  "lexicon": 1,
+  "id": "vg.nat.istat.moderation.listBlacklisted",
+  "defs": {
+    "main": {
+      "type": "query",
+      "description": "List all blacklisted CIDs (admin only)",
+      "parameters": {
+        "type": "params",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 50,
+            "description": "Maximum number of blacklisted CIDs to return"
+          },
+          "contentType": {
+            "type": "string",
+            "enum": ["emoji_blob", "avatar", "banner"],
+            "description": "Filter by content type"
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["blacklisted"],
+          "properties": {
+            "blacklisted": {
+              "type": "array",
+              "items": {
+                "type": "ref",
+                "ref": "#blacklistedCidView"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "name": "Unauthorized",
+          "description": "User is not an admin"
+        }
+      ]
+    },
+    "blacklistedCidView": {
+      "type": "object",
+      "required": ["cid", "reason", "contentType", "moderatorDid", "blacklistedAt"],
+      "properties": {
+        "cid": {
+          "type": "string",
+          "description": "The blacklisted CID"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for blacklisting"
+        },
+        "reasonDetails": {
+          "type": "string",
+          "description": "Additional details about the blacklist"
+        },
+        "contentType": {
+          "type": "string",
+          "description": "Type of content"
+        },
+        "moderatorDid": {
+          "type": "string",
+          "format": "did",
+          "description": "DID of the moderator who blacklisted this"
+        },
+        "blacklistedAt": {
+          "type": "string",
+          "format": "datetime",
+          "description": "When this was blacklisted"
+        }
+      }
+    }
+  }
+}

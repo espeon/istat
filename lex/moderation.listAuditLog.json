@@ -1,0 +1,94 @@
+{
+  "lexicon": 1,
+  "id": "vg.nat.istat.moderation.listAuditLog",
+  "defs": {
+    "main": {
+      "type": "query",
+      "description": "List moderation audit log entries (admin only)",
+      "parameters": {
+        "type": "params",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 50,
+            "description": "Maximum number of entries to return"
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor"
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["entries"],
+          "properties": {
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "ref",
+                "ref": "#auditLogEntry"
+              }
+            },
+            "cursor": {
+              "type": "string",
+              "description": "Pagination cursor for next page"
+            }
+          }
+        }
+      }
+    },
+    "auditLogEntry": {
+      "type": "object",
+      "required": ["id", "moderatorDid", "action", "targetType", "targetId", "createdAt"],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "Unique identifier for this log entry"
+        },
+        "moderatorDid": {
+          "type": "string",
+          "format": "did",
+          "description": "DID of the moderator who performed the action"
+        },
+        "moderatorHandle": {
+          "type": "string",
+          "format": "handle",
+          "description": "Handle of the moderator (for display)"
+        },
+        "action": {
+          "type": "string",
+          "description": "The moderation action performed",
+          "enum": ["blacklist_cid", "remove_blacklist", "delete_emoji", "delete_status"]
+        },
+        "targetType": {
+          "type": "string",
+          "description": "Type of content targeted",
+          "enum": ["emoji_blob", "avatar", "banner", "status", "emoji"]
+        },
+        "targetId": {
+          "type": "string",
+          "description": "Identifier of the targeted content (CID or AT-URI)"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for the action (for blacklists)",
+          "enum": ["nudity", "gore", "harassment", "spam", "copyright", "other"]
+        },
+        "reasonDetails": {
+          "type": "string",
+          "description": "Additional details about the reason"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "datetime",
+          "description": "When this action was performed"
+        }
+      }
+    }
+  }
+}

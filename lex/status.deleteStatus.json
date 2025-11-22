@@ -1,0 +1,46 @@
+{
+  "lexicon": 1,
+  "id": "vg.nat.istat.status.deleteStatus",
+  "defs": {
+    "main": {
+      "type": "procedure",
+      "description": "Delete a status (owner or admin only)",
+      "input": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["uri"],
+          "properties": {
+            "uri": {
+              "type": "string",
+              "format": "at-uri",
+              "description": "AT-URI of the status to delete"
+            }
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["success"],
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "name": "Unauthorized",
+          "description": "User is not the owner or an admin"
+        },
+        {
+          "name": "NotFound",
+          "description": "Status not found"
+        }
+      ]
+    }
+  }
+}

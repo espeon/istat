@@ -8,72 +8,82 @@
     --font-cursive: "Momo Signature", cursive;
 
     /* Radius */
-    --radius: 0rem;
+    --radius: 1rem;
 }
 
-/* Light theme (default) */
+/* Light theme (default) - Soft Retro Futurism */
 :root,
 [data-theme="light"] {
-    /* Colors */
-    --background: 250 248 248;
-    --foreground: 26 26 26;
+    /* Colors - Dreamy pastels with depth */
+    --background: 240 238 245;
+    --background-gradient-start: 245 242 250;
+    --background-gradient-end: 235 232 242;
+    --foreground: 75 70 92;
 
-    --card: 255 255 255;
-    --card-foreground: 26 26 26;
+    --card: 252 251 254;
+    --card-foreground: 75 70 92;
 
-    --popover: 255 255 255;
-    --popover-foreground: 26 26 26;
+    --popover: 252 251 254;
+    --popover-foreground: 75 70 92;
 
-    --primary: 44 44 44;
+    --primary: 139 92 246;
     --primary-foreground: 255 255 255;
 
-    --secondary: 229 229 224;
-    --secondary-foreground: 26 26 26;
+    --secondary: 245 243 250;
+    --secondary-foreground: 75 70 92;
 
-    --muted: 229 229 224;
-    --muted-foreground: 107 107 107;
+    --muted: 238 235 245;
+    --muted-foreground: 148 142 168;
 
-    --accent: 139 115 85;
+    --accent: 236 72 153;
     --accent-foreground: 255 255 255;
 
-    --destructive: 220 38 38;
+    --destructive: 239 68 68;
     --destructive-foreground: 255 255 255;
 
-    --border: 229 229 224;
-    --input: 229 229 224;
-    --ring: 44 44 44;
+    --border: 226 221 238;
+    --input: 226 221 238;
+    --ring: 139 92 246;
+
+    --accent-glow: 139 92 246;
+    --accent-secondary: 236 72 153;
 }
 
-/* Dark theme */
+/* Dark theme - Twilight Dreams */
 [data-theme="dark"] {
-    /* Colors */
-    --background: 15 15 15;
-    --foreground: 232 232 232;
+    /* Colors - Deep purples with soft glows */
+    --background: 25 20 35;
+    --background-gradient-start: 30 25 40;
+    --background-gradient-end: 20 15 30;
+    --foreground: 230 225 240;
 
-    --card: 26 26 26;
-    --card-foreground: 232 232 232;
+    --card: 35 30 48;
+    --card-foreground: 230 225 240;
 
-    --popover: 26 26 26;
-    --popover-foreground: 232 232 232;
+    --popover: 35 30 48;
+    --popover-foreground: 230 225 240;
 
-    --primary: 232 232 232;
-    --primary-foreground: 15 15 15;
+    --primary: 167 139 250;
+    --primary-foreground: 25 20 35;
 
-    --secondary: 42 42 42;
-    --secondary-foreground: 232 232 232;
+    --secondary: 45 38 60;
+    --secondary-foreground: 230 225 240;
 
-    --muted: 42 42 42;
-    --muted-foreground: 160 160 160;
+    --muted: 42 35 55;
+    --muted-foreground: 168 160 185;
 
-    --accent: 184 148 122;
-    --accent-foreground: 15 15 15;
+    --accent: 244 114 182;
+    --accent-foreground: 25 20 35;
 
-    --destructive: 239 68 68;
-    --destructive-foreground: 15 15 15;
+    --destructive: 251 113 133;
+    --destructive-foreground: 25 20 35;
 
-    --border: 42 42 42;
-    --input: 42 42 42;
-    --ring: 232 232 232;
+    --border: 65 55 82;
+    --input: 45 38 60;
+    --ring: 167 139 250;
+
+    --accent-glow: 167 139 250;
+    --accent-secondary: 244 114 182;
 }
 
 * {
@@ -93,9 +103,106 @@ html {
     font-size: 15px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: rgb(var(--background));
+    background: radial-gradient(
+        ellipse at top,
+        rgb(var(--background-gradient-start)) 0%,
+        rgb(var(--background)) 40%,
+        rgb(var(--background-gradient-end)) 100%
+    );
+    background-attachment: fixed;
     color: rgb(var(--foreground));
-    line-height: 1.5;
+    line-height: 1.6;
+    min-height: 100vh;
+    position: relative;
+}
+
+body {
+    position: relative;
+}
+
+/* Layer 1: Grid pattern */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image:
+        linear-gradient(rgba(var(--primary), 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--primary), 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Layer 2: Rain texture */
+body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("/rain.gif");
+    background-size: 150px 150px;
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: overlay;
+    mask-image: radial-gradient(
+        ellipse at center,
+        rgba(0, 0, 0, 0.2) 0%,
+        rgba(0, 0, 0, 0.2) 40%,
+        rgba(0, 0, 0, 0.4) 60%,
+        rgba(0, 0, 0, 0.6) 100%
+    );
+    -webkit-mask-image: radial-gradient(
+        ellipse at center,
+        rgba(0, 0, 0, 0.2) 0%,
+        rgba(0, 0, 0, 0.2) 40%,
+        rgba(0, 0, 0, 0.4) 60%,
+        rgba(0, 0, 0, 0.6) 100%
+    );
+}
+
+/* Layer 3: Glow orbs - needs to be on a higher layer */
+#app {
+    position: relative;
+    z-index: 10;
+}
+
+#app::before {
+    content: "";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 80%;
+    height: 80%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(
+        ellipse at 30% 30%,
+        rgba(var(--primary), 0.2) 0%,
+        transparent 50%
+    ),
+    radial-gradient(
+        ellipse at 70% 70%,
+        rgba(var(--accent), 0.15) 0%,
+        transparent 50%
+    );
+    pointer-events: none;
+    z-index: 3;
+    animation: breatheGlow 15s ease-in-out infinite;
+}
+
+@keyframes rainScroll {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 200px; }
+}
+
+@keyframes breatheGlow {
+    0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
 }
 
 .label {
@@ -121,20 +228,52 @@ html {
     }
 }
 
-/* status card animation */
+/* status card animation - soft and dreamy */
 .status-card {
-    animation: fadeInUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-    transition: all 0.2s ease;
+    animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    border: 1px solid rgba(var(--border), 0.5) !important;
+    border-radius: var(--radius);
+    backdrop-filter: blur(10px);
+    box-shadow:
+        0 4px 20px rgba(var(--primary), 0.08),
+        0 0 0 1px rgba(var(--primary), 0.05);
 }
 
 .status-card:hover {
-    transform: translateY(-1px);
+    transform: translateY(-4px);
+    box-shadow:
+        0 12px 40px rgba(var(--primary), 0.15),
+        0 0 0 1px rgba(var(--primary), 0.1),
+        0 0 30px rgba(var(--accent), 0.1);
+    border-color: rgba(var(--primary), 0.3);
+}
+
+/* Soft gradient overlay on hover */
+.status-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+    background: linear-gradient(
+        135deg,
+        rgba(var(--primary), 0.03) 0%,
+        rgba(var(--accent), 0.03) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+}
+
+.status-card:hover::before {
+    opacity: 1;
 }
 
 @keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(30px);
     }
     to {
         opacity: 1;
@@ -178,21 +317,146 @@ a:focus-visible {
     backdrop-filter: blur(16px);
 }
 
-/* theme toggle button */
+/* theme toggle button - soft and minimal */
 .theme-toggle {
-    width: 32px;
-    height: 32px;
-    border: 1px solid rgb(var(--border));
-    background: rgb(var(--card));
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(var(--border), 0.3);
+    border-radius: calc(var(--radius) * 0.6);
+    background: rgba(var(--card), 0.6);
     color: rgb(var(--foreground));
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 16px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 12px rgba(var(--primary), 0.08);
+}
+
+.theme-toggle::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        circle,
+        rgba(var(--primary), 0.1) 0%,
+        transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.theme-toggle:hover::before {
+    opacity: 1;
 }
 
 .theme-toggle:hover {
-    border-color: rgb(var(--primary));
+    border-color: rgba(var(--primary), 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(var(--primary), 0.15);
+}
+
+/* Floating action button - soft glow */
+.fab-glow {
+    position: relative;
+    border: 1px solid rgba(var(--primary), 0.3) !important;
+    box-shadow:
+        0 8px 32px rgba(var(--primary), 0.3),
+        0 0 0 1px rgba(var(--primary), 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(10px);
+}
+
+.fab-glow:hover {
+    transform: translateY(-4px) scale(1.05);
+    box-shadow:
+        0 16px 48px rgba(var(--primary), 0.5),
+        0 0 0 1px rgba(var(--primary), 0.3),
+        0 0 40px rgba(var(--primary), 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border-color: rgba(var(--primary), 0.5);
+}
+
+.fab-glow::before {
+    content: "";
+    position: absolute;
+    inset: -20px;
+    border-radius: inherit;
+    background: radial-gradient(
+        circle,
+        rgba(var(--primary), 0.2) 0%,
+        transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
+    filter: blur(20px);
+}
+
+.fab-glow:hover::before {
+    opacity: 1;
+}
+
+/* Page load animation */
+@keyframes pageLoad {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.page-animate {
+    animation: pageLoad 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Button - soft and glowing */
+button {
+    border: 1px solid rgba(var(--border), 0.4) !important;
+    border-radius: calc(var(--radius) * 0.5);
+    box-shadow:
+        0 2px 12px rgba(var(--primary), 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(10px);
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow:
+        0 8px 24px rgba(var(--primary), 0.2),
+        0 0 0 1px rgba(var(--primary), 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    border-color: rgba(var(--primary), 0.4);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow:
+        0 2px 8px rgba(var(--primary), 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Input - soft focus glow */
+input {
+    border: 1px solid rgba(var(--border), 0.4) !important;
+    border-radius: calc(var(--radius) * 0.5);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(10px);
+}
+
+input:focus-visible {
+    border-color: rgba(var(--primary), 0.5) !important;
+    box-shadow:
+        0 0 0 3px rgba(var(--primary), 0.1),
+        0 4px 16px rgba(var(--primary), 0.15);
+    outline: none;
 }

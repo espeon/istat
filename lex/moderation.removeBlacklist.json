@@ -1,0 +1,45 @@
+{
+  "lexicon": 1,
+  "id": "vg.nat.istat.moderation.removeBlacklist",
+  "defs": {
+    "main": {
+      "type": "procedure",
+      "description": "Remove a CID from the blacklist (admin only)",
+      "input": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["cid"],
+          "properties": {
+            "cid": {
+              "type": "string",
+              "description": "The CID to remove from blacklist"
+            }
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["success"],
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "name": "Unauthorized",
+          "description": "User is not an admin"
+        },
+        {
+          "name": "NotFound",
+          "description": "This CID is not blacklisted"
+        }
+      ]
+    }
+  }
+}
