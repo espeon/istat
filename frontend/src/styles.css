@@ -152,17 +152,17 @@ body::after {
     mix-blend-mode: overlay;
     mask-image: radial-gradient(
         ellipse at center,
-        transparent 0%,
-        rgba(0, 0, 0, 0.3) 20%,
-        rgba(0, 0, 0, 0.8) 60%,
-        black 100%
+        rgba(0, 0, 0, 0.2) 0%,
+        rgba(0, 0, 0, 0.2) 40%,
+        rgba(0, 0, 0, 0.4) 60%,
+        rgba(0, 0, 0, 0.6) 100%
     );
     -webkit-mask-image: radial-gradient(
         ellipse at center,
-        transparent 0%,
-        rgba(0, 0, 0, 0.3) 20%,
-        rgba(0, 0, 0, 0.8) 60%,
-        black 100%
+        rgba(0, 0, 0, 0.2) 0%,
+        rgba(0, 0, 0, 0.2) 40%,
+        rgba(0, 0, 0, 0.4) 60%,
+        rgba(0, 0, 0, 0.6) 100%
     );
 }
 

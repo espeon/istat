@@ -10,38 +10,35 @@ export function Header({ isScrolled }: HeaderProps) {
   return (
     <header
       className={`sticky top-0 z-50 flex items-center transition-all duration-500 ${
-        isScrolled ? "h-14" : "h-20"
+        isScrolled ? "h-12" : "h-16"
       }`}
       style={{
         background: isScrolled
-          ? "rgba(var(--background), 0.8)"
-          : "transparent",
-        backdropFilter: isScrolled ? "blur(20px)" : "none",
-        borderBottom: isScrolled
-          ? "1px solid rgba(var(--border), 0.2)"
-          : "none",
+          ? "rgba(var(--card), 0.6)"
+          : "rgba(var(--background), 0.3)",
+        backdropFilter: "blur(20px)",
+        borderBottom: "1px solid rgba(var(--border), 0.2)",
+        boxShadow: isScrolled ? "0 4px 20px rgba(var(--primary), 0.08)" : "none",
       }}
     >
-      <div className="max-w-4xl mx-auto px-8 py-4 relative flex-1">
-        <div className="flex items-center justify-between">
+      <div className="max-w-4xl mx-auto px-8 relative flex-1">
+        <div className="flex items-center justify-center">
           <Link to="/" className="group">
             <h1
-              className={`font-cursive transition-all duration-500 ${
-                isScrolled ? "text-2xl" : "text-4xl"
+              className={`font-sans uppercase tracking-widest transition-all duration-500 ${
+                isScrolled ? "text-xs" : "text-sm"
               }`}
               style={{
-                background: `linear-gradient(135deg, rgb(var(--primary)) 0%, rgb(var(--accent)) 100%)`,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                fontWeight: 500,
-                filter: "drop-shadow(0 2px 8px rgba(var(--primary), 0.3))",
+                color: "rgb(var(--foreground))",
+                fontWeight: 400,
+                letterSpacing: "0.3em",
               }}
             >
               nyt
             </h1>
           </Link>
-
+        </div>
+        <div className="absolute right-8 top-1/2 -translate-y-1/2">
           <ThemeToggle />
         </div>
       </div>
