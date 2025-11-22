@@ -9,57 +9,40 @@ interface HeaderProps {
 export function Header({ isScrolled }: HeaderProps) {
   return (
     <header
-      className={`sticky top-0 z-50 border-b-4 flex items-center transition-all duration-300 ${
-        isScrolled ? "h-16" : "h-20"
+      className={`sticky top-0 z-50 flex items-center transition-all duration-500 ${
+        isScrolled ? "h-14" : "h-20"
       }`}
       style={{
-        borderColor: "rgb(var(--border))",
-        background: "rgb(var(--background))",
-        boxShadow: isScrolled
-          ? "0 4px 0 rgb(var(--primary))"
+        background: isScrolled
+          ? "rgba(var(--background), 0.8)"
+          : "transparent",
+        backdropFilter: isScrolled ? "blur(20px)" : "none",
+        borderBottom: isScrolled
+          ? "1px solid rgba(var(--border), 0.2)"
           : "none",
       }}
     >
-      <div className="max-w-4xl mx-auto px-6 py-2 relative flex-1">
-        {/* Bold accent block */}
-        <div
-          className="absolute left-0 top-0 bottom-0 w-2 transition-all duration-300"
-          style={{
-            background: `linear-gradient(180deg, rgb(var(--primary)) 0%, rgb(var(--accent)) 100%)`,
-            width: isScrolled ? "4px" : "2px",
-          }}
-        />
-
+      <div className="max-w-4xl mx-auto px-8 py-4 relative flex-1">
         <div className="flex items-center justify-between">
-          <Link to="/" className="group flex items-center gap-3">
+          <Link to="/" className="group">
             <h1
-              className={`font-cursive text-[rgb(var(--foreground))] transition-all duration-300 tracking-tight ${
-                isScrolled ? "text-3xl" : "text-5xl"
+              className={`font-cursive transition-all duration-500 ${
+                isScrolled ? "text-2xl" : "text-4xl"
               }`}
               style={{
-                fontWeight: 600,
-                letterSpacing: "-0.02em",
+                background: `linear-gradient(135deg, rgb(var(--primary)) 0%, rgb(var(--accent)) 100%)`,
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                fontWeight: 500,
+                filter: "drop-shadow(0 2px 8px rgba(var(--primary), 0.3))",
               }}
             >
-              <span className="relative inline-block">
-                nyt
-                {/* Underline accent */}
-                <span
-                  className="absolute bottom-0 left-0 h-1 bg-[rgb(var(--primary))] transition-all duration-300 group-hover:h-2"
-                  style={{
-                    width: "100%",
-                  }}
-                />
-              </span>
+              nyt
             </h1>
-            <span className="text-xs uppercase tracking-wider text-[rgb(var(--muted-foreground))] font-sans mt-2">
-              Status
-            </span>
           </Link>
 
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-          </div>
+          <ThemeToggle />
         </div>
       </div>
     </header>

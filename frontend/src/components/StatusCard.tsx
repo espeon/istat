@@ -49,7 +49,7 @@ export function StatusCard({ status, index }: StatusCardProps) {
           animationDelay: `${index * 50}ms`,
         }}
       >
-        <div className="flex gap-4 ml-8">
+        <div className="flex gap-4">
           {/* emoji */}
           <div className="shrink-0">
             <div className="text-2xl text-[rgb(var(--muted))] w-20 h-20 flex justify-center items-center">
@@ -74,7 +74,7 @@ export function StatusCard({ status, index }: StatusCardProps) {
         animationDelay: `${index * 50}ms`,
       }}
     >
-      <div className="flex gap-6 ml-8">
+      <div className="flex gap-6">
         {/* emoji */}
         <div className="shrink-0 max-h-20">
           {!imageError ? (

@@ -8,82 +8,82 @@
     --font-cursive: "Momo Signature", cursive;
 
     /* Radius */
-    --radius: 0rem;
+    --radius: 1rem;
 }
 
-/* Light theme (default) - Bold Editorial */
+/* Light theme (default) - Soft Retro Futurism */
 :root,
 [data-theme="light"] {
-    /* Colors - High contrast editorial with punch */
-    --background: 248 246 242;
-    --background-gradient-start: 248 246 242;
-    --background-gradient-end: 255 251 245;
-    --foreground: 18 18 18;
+    /* Colors - Dreamy pastels with depth */
+    --background: 240 238 245;
+    --background-gradient-start: 245 242 250;
+    --background-gradient-end: 235 232 242;
+    --foreground: 75 70 92;
 
-    --card: 255 255 255;
-    --card-foreground: 18 18 18;
+    --card: 252 251 254;
+    --card-foreground: 75 70 92;
 
-    --popover: 255 255 255;
-    --popover-foreground: 18 18 18;
+    --popover: 252 251 254;
+    --popover-foreground: 75 70 92;
 
-    --primary: 255 68 34;
+    --primary: 139 92 246;
     --primary-foreground: 255 255 255;
 
-    --secondary: 245 240 232;
-    --secondary-foreground: 18 18 18;
+    --secondary: 245 243 250;
+    --secondary-foreground: 75 70 92;
 
-    --muted: 238 234 228;
-    --muted-foreground: 102 102 102;
+    --muted: 238 235 245;
+    --muted-foreground: 148 142 168;
 
-    --accent: 0 112 243;
+    --accent: 236 72 153;
     --accent-foreground: 255 255 255;
 
-    --destructive: 220 38 38;
+    --destructive: 239 68 68;
     --destructive-foreground: 255 255 255;
 
-    --border: 18 18 18;
-    --input: 228 224 218;
-    --ring: 255 68 34;
+    --border: 226 221 238;
+    --input: 226 221 238;
+    --ring: 139 92 246;
 
-    --accent-glow: 255 68 34;
-    --accent-secondary: 0 112 243;
+    --accent-glow: 139 92 246;
+    --accent-secondary: 236 72 153;
 }
 
-/* Dark theme - Neon Brutalist */
+/* Dark theme - Twilight Dreams */
 [data-theme="dark"] {
-    /* Colors - Dark brutalist with electric highlights */
-    --background: 12 12 12;
-    --background-gradient-start: 12 12 12;
-    --background-gradient-end: 20 20 20;
-    --foreground: 248 248 248;
+    /* Colors - Deep purples with soft glows */
+    --background: 25 20 35;
+    --background-gradient-start: 30 25 40;
+    --background-gradient-end: 20 15 30;
+    --foreground: 230 225 240;
 
-    --card: 24 24 24;
-    --card-foreground: 248 248 248;
+    --card: 35 30 48;
+    --card-foreground: 230 225 240;
 
-    --popover: 24 24 24;
-    --popover-foreground: 248 248 248;
+    --popover: 35 30 48;
+    --popover-foreground: 230 225 240;
 
-    --primary: 255 68 34;
-    --primary-foreground: 255 255 255;
+    --primary: 167 139 250;
+    --primary-foreground: 25 20 35;
 
-    --secondary: 38 38 38;
-    --secondary-foreground: 248 248 248;
+    --secondary: 45 38 60;
+    --secondary-foreground: 230 225 240;
 
-    --muted: 32 32 32;
-    --muted-foreground: 160 160 160;
+    --muted: 42 35 55;
+    --muted-foreground: 168 160 185;
 
-    --accent: 0 194 255;
-    --accent-foreground: 12 12 12;
+    --accent: 244 114 182;
+    --accent-foreground: 25 20 35;
 
-    --destructive: 255 72 72;
-    --destructive-foreground: 12 12 12;
+    --destructive: 251 113 133;
+    --destructive-foreground: 25 20 35;
 
-    --border: 248 248 248;
-    --input: 38 38 38;
-    --ring: 255 68 34;
+    --border: 65 55 82;
+    --input: 45 38 60;
+    --ring: 167 139 250;
 
-    --accent-glow: 255 68 34;
-    --accent-secondary: 0 194 255;
+    --accent-glow: 167 139 250;
+    --accent-secondary: 244 114 182;
 }
 
 * {
@@ -103,9 +103,15 @@ html {
     font-size: 15px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: rgb(var(--background));
+    background: linear-gradient(
+        135deg,
+        rgb(var(--background-gradient-start)) 0%,
+        rgb(var(--background)) 50%,
+        rgb(var(--background-gradient-end)) 100%
+    );
+    background-attachment: fixed;
     color: rgb(var(--foreground));
-    line-height: 1.5;
+    line-height: 1.6;
     min-height: 100vh;
     position: relative;
 }
@@ -114,45 +120,49 @@ body {
     position: relative;
 }
 
-/* Geometric background pattern */
+/* Soft ambient glow orbs */
 body::before {
     content: "";
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image:
-        linear-gradient(90deg, transparent 0%, transparent calc(100% - 1px), rgba(var(--border), 0.08) calc(100% - 1px)),
-        linear-gradient(0deg, transparent 0%, transparent calc(100% - 1px), rgba(var(--border), 0.08) calc(100% - 1px));
-    background-size: 80px 80px;
+    top: -20%;
+    left: -10%;
+    width: 60%;
+    height: 60%;
+    background: radial-gradient(
+        circle,
+        rgba(var(--primary), 0.15) 0%,
+        transparent 70%
+    );
     pointer-events: none;
     z-index: 0;
-    opacity: 0.4;
+    animation: floatOrb1 20s ease-in-out infinite;
 }
 
-/* Bold accent stripe */
 body::after {
     content: "";
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 8px;
-    height: 100vh;
-    background: linear-gradient(
-        180deg,
-        rgb(var(--primary)) 0%,
-        rgb(var(--accent)) 50%,
-        rgb(var(--primary)) 100%
+    bottom: -20%;
+    right: -10%;
+    width: 50%;
+    height: 50%;
+    background: radial-gradient(
+        circle,
+        rgba(var(--accent), 0.12) 0%,
+        transparent 70%
     );
     pointer-events: none;
-    z-index: 100;
-    animation: accentPulse 8s ease-in-out infinite;
+    z-index: 0;
+    animation: floatOrb2 18s ease-in-out infinite;
 }
 
-@keyframes accentPulse {
-    0%, 100% { opacity: 0.8; }
-    50% { opacity: 1; }
+@keyframes floatOrb1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(10%, 10%) scale(1.1); }
+}
+
+@keyframes floatOrb2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-10%, -10%) scale(1.15); }
 }
 
 .label {
@@ -178,38 +188,46 @@ body::after {
     }
 }
 
-/* status card animation - bold design */
+/* status card animation - soft and dreamy */
 .status-card {
-    animation: fadeInUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
-    border: 2px solid rgb(var(--border)) !important;
-    box-shadow: 4px 4px 0 rgba(var(--foreground), 0.15);
+    border: 1px solid rgba(var(--border), 0.5) !important;
+    border-radius: var(--radius);
+    backdrop-filter: blur(10px);
+    box-shadow:
+        0 4px 20px rgba(var(--primary), 0.08),
+        0 0 0 1px rgba(var(--primary), 0.05);
 }
 
 .status-card:hover {
-    transform: translate(-2px, -2px);
-    box-shadow: 6px 6px 0 rgba(var(--primary), 0.3);
+    transform: translateY(-4px);
+    box-shadow:
+        0 12px 40px rgba(var(--primary), 0.15),
+        0 0 0 1px rgba(var(--primary), 0.1),
+        0 0 30px rgba(var(--accent), 0.1);
+    border-color: rgba(var(--primary), 0.3);
 }
 
-/* Colored accent bar on left */
+/* Soft gradient overlay on hover */
 .status-card::before {
     content: "";
     position: absolute;
-    left: 0;
-    top: 0;
-    width: 6px;
-    height: 100%;
+    inset: 0;
+    border-radius: var(--radius);
     background: linear-gradient(
-        180deg,
-        rgb(var(--primary)) 0%,
-        rgb(var(--accent)) 100%
+        135deg,
+        rgba(var(--primary), 0.03) 0%,
+        rgba(var(--accent), 0.03) 100%
     );
-    transition: width 0.3s ease;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
 }
 
 .status-card:hover::before {
-    width: 12px;
+    opacity: 1;
 }
 
 @keyframes fadeInUp {
@@ -259,28 +277,35 @@ a:focus-visible {
     backdrop-filter: blur(16px);
 }
 
-/* theme toggle button */
+/* theme toggle button - soft and minimal */
 .theme-toggle {
-    width: 32px;
-    height: 32px;
-    border: 1px solid rgb(var(--border));
-    background: rgb(var(--card));
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(var(--border), 0.3);
+    border-radius: calc(var(--radius) * 0.6);
+    background: rgba(var(--card), 0.6);
     color: rgb(var(--foreground));
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 16px;
     position: relative;
     overflow: hidden;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 12px rgba(var(--primary), 0.08);
 }
 
 .theme-toggle::before {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(var(--accent), 0.1), rgba(var(--primary), 0.1));
+    background: radial-gradient(
+        circle,
+        rgba(var(--primary), 0.1) 0%,
+        transparent 70%
+    );
     opacity: 0;
     transition: opacity 0.3s ease;
 }
@@ -290,36 +315,51 @@ a:focus-visible {
 }
 
 .theme-toggle:hover {
-    border-color: rgb(var(--accent));
-    transform: scale(1.05);
+    border-color: rgba(var(--primary), 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(var(--primary), 0.15);
 }
 
-/* Floating action button - bold brutalist style */
+/* Floating action button - soft glow */
 .fab-glow {
     position: relative;
-    border: 3px solid rgb(var(--foreground)) !important;
-    box-shadow: 6px 6px 0 rgba(var(--foreground), 0.2);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(var(--primary), 0.3) !important;
+    box-shadow:
+        0 8px 32px rgba(var(--primary), 0.3),
+        0 0 0 1px rgba(var(--primary), 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(10px);
 }
 
 .fab-glow:hover {
-    transform: translate(-3px, -3px);
-    box-shadow: 9px 9px 0 rgba(var(--accent), 0.6);
+    transform: translateY(-4px) scale(1.05);
+    box-shadow:
+        0 16px 48px rgba(var(--primary), 0.5),
+        0 0 0 1px rgba(var(--primary), 0.3),
+        0 0 40px rgba(var(--primary), 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border-color: rgba(var(--primary), 0.5);
 }
 
 .fab-glow::before {
     content: "";
     position: absolute;
-    inset: -6px;
+    inset: -20px;
     border-radius: inherit;
-    background: rgb(var(--accent));
+    background: radial-gradient(
+        circle,
+        rgba(var(--primary), 0.2) 0%,
+        transparent 70%
+    );
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.4s ease;
     z-index: -1;
+    filter: blur(20px);
 }
 
 .fab-glow:hover::before {
-    opacity: 0.3;
+    opacity: 1;
 }
 
 /* Page load animation */
@@ -338,31 +378,45 @@ a:focus-visible {
     animation: pageLoad 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
-/* Button press animation */
+/* Button - soft and glowing */
 button {
-    border: 2px solid rgb(var(--foreground)) !important;
-    box-shadow: 3px 3px 0 rgba(var(--foreground), 0.15);
-    transition: all 0.2s ease;
+    border: 1px solid rgba(var(--border), 0.4) !important;
+    border-radius: calc(var(--radius) * 0.5);
+    box-shadow:
+        0 2px 12px rgba(var(--primary), 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(10px);
 }
 
 button:hover:not(:disabled) {
-    transform: translate(-1px, -1px);
-    box-shadow: 4px 4px 0 rgba(var(--primary), 0.3);
+    transform: translateY(-2px);
+    box-shadow:
+        0 8px 24px rgba(var(--primary), 0.2),
+        0 0 0 1px rgba(var(--primary), 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    border-color: rgba(var(--primary), 0.4);
 }
 
 button:active:not(:disabled) {
-    transform: translate(1px, 1px);
-    box-shadow: 1px 1px 0 rgba(var(--foreground), 0.15);
+    transform: translateY(0);
+    box-shadow:
+        0 2px 8px rgba(var(--primary), 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-/* Input focus - bold outline */
+/* Input - soft focus glow */
 input {
-    border: 2px solid rgb(var(--input)) !important;
-    transition: all 0.2s ease;
+    border: 1px solid rgba(var(--border), 0.4) !important;
+    border-radius: calc(var(--radius) * 0.5);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(10px);
 }
 
 input:focus-visible {
-    border-color: rgb(var(--primary)) !important;
-    box-shadow: 3px 3px 0 rgba(var(--primary), 0.2);
-    transform: translate(-1px, -1px);
+    border-color: rgba(var(--primary), 0.5) !important;
+    box-shadow:
+        0 0 0 3px rgba(var(--primary), 0.1),
+        0 4px 16px rgba(var(--primary), 0.15);
+    outline: none;
 }
