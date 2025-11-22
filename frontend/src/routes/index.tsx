@@ -109,7 +109,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[rgb(var(--background))] relative">
+    <div className="min-h-screen relative">
       <Header isScrolled={isScrolled} />
 
       {isLoggedIn ? (
