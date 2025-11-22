@@ -1,8 +1,9 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect, useMemo } from "react";
 import { ok } from "@atcute/client";
-import { Trash2, Shield, AlertTriangle } from "lucide-react";
+import { Trash2, Shield, Search, Copy, TrendingUp } from "lucide-react";
 import { useQt } from "../lib/qt-provider";
+import { useToast } from "../lib/toast";
 import { Header, useScrollDetection } from "../components/Header";
 import { Footer } from "../components/Footer";
 
@@ -35,8 +36,9 @@ const CONTENT_TYPES = [
 ] as const;
 
 function AdminPanel() {
-  const { isLoggedIn, client } = useQt();
+  const { isLoggedIn, client, did } = useQt();
   const navigate = useNavigate();
+  const toast = useToast();
   const isScrolled = useScrollDetection(20);
 
   const [isAdmin, setIsAdmin] = useState(false);
@@ -44,14 +46,17 @@ function AdminPanel() {
   const [blacklisted, setBlacklisted] = useState<BlacklistedCid[]>([]);
   const [loadingList, setLoadingList] = useState(true);
 
+  // Search/filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterReason, setFilterReason] = useState<string>("all");
+  const [filterContentType, setFilterContentType] = useState<string>("all");
+
   // Form state
   const [cid, setCid] = useState("");
   const [reason, setReason] = useState<string>("other");
   const [reasonDetails, setReasonDetails] = useState("");
   const [contentType, setContentType] = useState<string>("emoji_blob");
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminStatus();
@@ -62,6 +67,38 @@ function AdminPanel() {
       fetchBlacklisted();
     }
   }, [isAdmin]);
+
+  // Filtered blacklisted items
+  const filteredBlacklisted = useMemo(() => {
+    return blacklisted.filter((item) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        item.cid.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.reasonDetails?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesReason = filterReason === "all" || item.reason === filterReason;
+      const matchesContentType = filterContentType === "all" || item.contentType === filterContentType;
+
+      return matchesSearch && matchesReason && matchesContentType;
+    });
+  }, [blacklisted, searchQuery, filterReason, filterContentType]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    return {
+      total: blacklisted.length,
+      today: blacklisted.filter(
+        (item) => new Date(item.blacklistedAt) >= today
+      ).length,
+      byReason: blacklisted.reduce((acc, item) => {
+        acc[item.reason] = (acc[item.reason] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>),
+    };
+  }, [blacklisted]);
 
   const checkAdminStatus = async () => {
     if (!isLoggedIn) {
@@ -76,7 +113,7 @@ function AdminPanel() {
       );
 
       if (!data.isAdmin) {
-        alert("You are not authorized to access this page");
+        toast.error("You are not authorized to access this page");
         navigate({ to: "/" });
         return;
       }
@@ -84,7 +121,7 @@ function AdminPanel() {
       setIsAdmin(true);
     } catch (err) {
       console.error("Failed to check admin status:", err);
-      alert("Failed to verify admin status");
+      toast.error("Failed to verify admin status");
       navigate({ to: "/" });
     } finally {
       setLoading(false);
@@ -100,7 +137,7 @@ function AdminPanel() {
       setBlacklisted(data.blacklisted);
     } catch (err) {
       console.error("Failed to fetch blacklisted CIDs:", err);
-      setError("Failed to load blacklisted content");
+      toast.error("Failed to load blacklisted content");
     } finally {
       setLoadingList(false);
     }
@@ -108,11 +145,9 @@ function AdminPanel() {
 
   const handleBlacklist = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
 
     if (!cid.trim()) {
-      setError("CID is required");
+      toast.error("CID is required");
       return;
     }
 
@@ -129,13 +164,13 @@ function AdminPanel() {
         }),
       );
 
-      setSuccess("CID blacklisted successfully");
+      toast.success("CID blacklisted successfully");
       setCid("");
       setReasonDetails("");
       fetchBlacklisted();
     } catch (err) {
       console.error("Failed to blacklist CID:", err);
-      setError(
+      toast.error(
         err instanceof Error ? err.message : "Failed to blacklist CID",
       );
     } finally {
@@ -144,10 +179,6 @@ function AdminPanel() {
   };
 
   const handleRemoveBlacklist = async (cidToRemove: string) => {
-    if (!confirm(`Remove blacklist for CID: ${cidToRemove}?`)) {
-      return;
-    }
-
     try {
       await ok(
         client.call("vg.nat.istat.moderation.removeBlacklist", {
@@ -155,13 +186,29 @@ function AdminPanel() {
         }),
       );
 
-      setSuccess("Blacklist removed successfully");
+      toast.success("Blacklist removed successfully");
       fetchBlacklisted();
     } catch (err) {
       console.error("Failed to remove blacklist:", err);
-      setError(
+      toast.error(
         err instanceof Error ? err.message : "Failed to remove blacklist",
       );
+    }
+  };
+
+  const copyCid = async (cidToCopy: string) => {
+    try {
+      await navigator.clipboard.writeText(cidToCopy);
+      toast.success("CID copied to clipboard");
+    } catch (err) {
+      toast.error("Failed to copy CID");
+    }
+  };
+
+  const fillExampleUri = () => {
+    if (did) {
+      setCid(`Example: at://${did}/vg.nat.istat.moji.emoji/3lbxyz123abc`);
+      toast.info("Paste the actual CID from content you want to blacklist");
     }
   };
 
@@ -188,47 +235,73 @@ function AdminPanel() {
       <Header isScrolled={isScrolled} />
 
       <main className="max-w-4xl mx-auto px-6 py-12 relative z-10">
-        <div className="flex items-center gap-3 mb-8">
-          <Shield
-            className="text-[rgb(var(--primary))]"
-            size={32}
-            strokeWidth={2}
-          />
-          <h1 className="text-3xl font-cursive text-[rgb(var(--foreground))]">
-            moderation panel
-          </h1>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <Shield
+              className="text-[rgb(var(--primary))]"
+              size={32}
+              strokeWidth={2}
+            />
+            <h1 className="text-3xl font-cursive text-[rgb(var(--foreground))]">
+              moderation panel
+            </h1>
+          </div>
         </div>
 
-        {/* Alerts */}
-        {error && (
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div
-            className="mb-6 p-4 rounded-lg border"
+            className="p-4 rounded-lg border"
             style={{
-              background: "rgba(var(--destructive), 0.1)",
-              borderColor: "rgba(var(--destructive), 0.3)",
+              background: "rgba(var(--card), 0.6)",
+              borderColor: "rgba(var(--border), 0.3)",
+              backdropFilter: "blur(20px)",
             }}
           >
-            <div className="flex items-center gap-2">
-              <AlertTriangle
-                size={16}
-                className="text-[rgb(var(--destructive))]"
-              />
-              <p className="text-sm text-[rgb(var(--destructive))]">{error}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp size={16} className="text-[rgb(var(--primary))]" />
+              <p className="text-xs font-serif text-[rgb(var(--muted-foreground))]">
+                Total Blacklisted
+              </p>
             </div>
+            <p className="text-2xl font-cursive text-[rgb(var(--foreground))]">
+              {stats.total}
+            </p>
           </div>
-        )}
 
-        {success && (
           <div
-            className="mb-6 p-4 rounded-lg border"
+            className="p-4 rounded-lg border"
             style={{
-              background: "rgba(var(--primary), 0.1)",
-              borderColor: "rgba(var(--primary), 0.3)",
+              background: "rgba(var(--card), 0.6)",
+              borderColor: "rgba(var(--border), 0.3)",
+              backdropFilter: "blur(20px)",
             }}
           >
-            <p className="text-sm text-[rgb(var(--primary))]">{success}</p>
+            <p className="text-xs font-serif text-[rgb(var(--muted-foreground))] mb-1">
+              Blacklisted Today
+            </p>
+            <p className="text-2xl font-cursive text-[rgb(var(--foreground))]">
+              {stats.today}
+            </p>
           </div>
-        )}
+
+          <div
+            className="p-4 rounded-lg border"
+            style={{
+              background: "rgba(var(--card), 0.6)",
+              borderColor: "rgba(var(--border), 0.3)",
+              backdropFilter: "blur(20px)",
+            }}
+          >
+            <p className="text-xs font-serif text-[rgb(var(--muted-foreground))] mb-1">
+              Top Reason
+            </p>
+            <p className="text-lg font-serif text-[rgb(var(--foreground))]">
+              {Object.entries(stats.byReason).sort(([,a], [,b]) => b - a)[0]?.[0] || "—"}
+            </p>
+          </div>
+        </div>
 
         {/* Blacklist Form */}
         <div
@@ -244,18 +317,30 @@ function AdminPanel() {
           </h2>
           <form onSubmit={handleBlacklist} className="space-y-4">
             <div>
-              <label className="block text-sm font-serif mb-2 text-[rgb(var(--muted-foreground))]">
-                CID
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-serif text-[rgb(var(--muted-foreground))]">
+                  CID or AT-URI
+                </label>
+                <button
+                  type="button"
+                  onClick={fillExampleUri}
+                  className="text-xs text-[rgb(var(--primary))] hover:underline"
+                >
+                  show example
+                </button>
+              </div>
               <input
                 type="text"
                 value={cid}
                 onChange={(e) => setCid(e.target.value)}
-                placeholder="bafyrei..."
-                className="w-full px-4 py-2 text-sm rounded-lg bg-[rgb(var(--background))] text-[rgb(var(--foreground))] border"
+                placeholder="bafyrei... or at://did:plc:xyz/collection/rkey"
+                className="w-full px-4 py-2 text-sm rounded-lg bg-[rgb(var(--background))] text-[rgb(var(--foreground))] border font-mono"
                 style={{ borderColor: "rgb(var(--input))" }}
                 disabled={submitting}
               />
+              <p className="text-xs text-[rgb(var(--muted-foreground))] mt-1">
+                Right-click on an emoji or avatar and "Copy Image Address" to get the CID
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -323,6 +408,61 @@ function AdminPanel() {
           </form>
         </div>
 
+        {/* Search and Filters */}
+        <div
+          className="p-4 rounded-lg border mb-6"
+          style={{
+            background: "rgba(var(--card), 0.6)",
+            borderColor: "rgba(var(--border), 0.3)",
+            backdropFilter: "blur(20px)",
+          }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--muted-foreground))]"
+                size={16}
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by CID or details..."
+                className="w-full pl-10 pr-4 py-2 text-sm rounded-lg bg-[rgb(var(--background))] text-[rgb(var(--foreground))] border"
+                style={{ borderColor: "rgb(var(--input))" }}
+              />
+            </div>
+
+            <select
+              value={filterReason}
+              onChange={(e) => setFilterReason(e.target.value)}
+              className="px-4 py-2 text-sm rounded-lg bg-[rgb(var(--background))] text-[rgb(var(--foreground))] border"
+              style={{ borderColor: "rgb(var(--input))" }}
+            >
+              <option value="all">All Reasons</option>
+              {REASONS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={filterContentType}
+              onChange={(e) => setFilterContentType(e.target.value)}
+              className="px-4 py-2 text-sm rounded-lg bg-[rgb(var(--background))] text-[rgb(var(--foreground))] border"
+              style={{ borderColor: "rgb(var(--input))" }}
+            >
+              <option value="all">All Types</option>
+              {CONTENT_TYPES.map((ct) => (
+                <option key={ct.value} value={ct.value}>
+                  {ct.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         {/* Blacklisted CIDs List */}
         <div
           className="p-6 rounded-lg border"
@@ -333,20 +473,22 @@ function AdminPanel() {
           }}
         >
           <h2 className="text-xl font-serif mb-4 text-[rgb(var(--foreground))]">
-            blacklisted content ({blacklisted.length})
+            blacklisted content ({filteredBlacklisted.length})
           </h2>
 
           {loadingList ? (
             <div className="flex items-center justify-center py-12">
               <div className="loading-spinner" />
             </div>
-          ) : blacklisted.length === 0 ? (
+          ) : filteredBlacklisted.length === 0 ? (
             <p className="text-center py-12 text-[rgb(var(--muted-foreground))]">
-              no blacklisted content
+              {searchQuery || filterReason !== "all" || filterContentType !== "all"
+                ? "no results found"
+                : "no blacklisted content"}
             </p>
           ) : (
             <div className="space-y-3">
-              {blacklisted.map((item) => (
+              {filteredBlacklisted.map((item) => (
                 <div
                   key={item.cid}
                   className="p-4 rounded-lg border flex items-start justify-between gap-4"
@@ -376,9 +518,18 @@ function AdminPanel() {
                         {item.contentType.replace("_", " ")}
                       </span>
                     </div>
-                    <p className="text-xs font-mono text-[rgb(var(--foreground))] break-all mb-2">
-                      {item.cid}
-                    </p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="text-xs font-mono text-[rgb(var(--foreground))] break-all flex-1">
+                        {item.cid}
+                      </p>
+                      <button
+                        onClick={() => copyCid(item.cid)}
+                        className="p-1 rounded hover:bg-[rgba(var(--primary),0.1)] text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--primary))] transition-colors"
+                        title="Copy CID"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    </div>
                     {item.reasonDetails && (
                       <p className="text-xs text-[rgb(var(--muted-foreground))] mb-2">
                         {item.reasonDetails}
