@@ -1,5 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "@tanstack/react-router";
+import { MoreVertical, Trash2, ShieldAlert } from "lucide-react";
+import { ok } from "@atcute/client";
+import { useQt } from "../lib/qt-provider";
+import { useIsAdmin } from "../lib/useIsAdmin";
+import { useToast } from "../lib/toast";
 
 interface StatusCardProps {
   status: {
@@ -15,8 +20,11 @@ interface StatusCardProps {
     createdAt: string;
     emojiName?: string;
     emojiAlt?: string;
+    emojiBlobCid?: string;
+    emojiRef?: string;
   };
   index: number;
+  onModerated?: () => void;
 }
 
 function checkExpired(expires?: string): boolean {
@@ -26,11 +34,19 @@ function checkExpired(expires?: string): boolean {
   return now < expiryDate;
 }
 
-export function StatusCard({ status, index }: StatusCardProps) {
+export function StatusCard({ status, index, onModerated }: StatusCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-
   const [isExpired, setIsExpired] = useState(checkExpired(status.expires));
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const { client, did: currentUserDid } = useQt();
+  const { isAdmin } = useIsAdmin();
+  const toast = useToast();
+
+  const isOwner = currentUserDid === status.did;
+  const canModerate = isAdmin || isOwner;
 
   // check expires every ~second
   useEffect(() => {
@@ -39,6 +55,77 @@ export function StatusCard({ status, index }: StatusCardProps) {
     }, 1000);
     return () => clearInterval(interval);
   }, [status.expires]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showDropdown]);
+
+  const handleBlacklistEmoji = async () => {
+    if (!status.emojiBlobCid) {
+      toast.error("Cannot blacklist: emoji CID not available");
+      return;
+    }
+
+    const reason = prompt("Reason for blacklisting?\n\nnudity | gore | harassment | spam | copyright | other");
+    if (!reason) return;
+
+    const validReasons = ["nudity", "gore", "harassment", "spam", "copyright", "other"];
+    if (!validReasons.includes(reason.toLowerCase())) {
+      toast.error("Invalid reason. Must be one of: nudity, gore, harassment, spam, copyright, other");
+      return;
+    }
+
+    const details = prompt("Additional details (optional):");
+
+    try {
+      await ok(
+        client.post("vg.nat.istat.moderation.blacklistCid", {
+          data: {
+            cid: status.emojiBlobCid,
+            reason: reason.toLowerCase() as any,
+            reasonDetails: details || undefined,
+            contentType: "emoji_blob",
+          },
+        })
+      );
+      toast.success("Emoji blacklisted successfully");
+      setShowDropdown(false);
+      onModerated?.();
+    } catch (err) {
+      console.error("Failed to blacklist emoji:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to blacklist emoji");
+    }
+  };
+
+  const handleDeleteStatus = async () => {
+    if (!confirm("Delete this status? This cannot be undone.")) return;
+
+    try {
+      await ok(
+        client.post("vg.nat.istat.status.deleteStatus", {
+          data: {
+            did: status.did,
+            rkey: status.rkey,
+          },
+        })
+      );
+      toast.success("Status deleted successfully");
+      setShowDropdown(false);
+      onModerated?.();
+    } catch (err) {
+      console.error("Failed to delete status:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to delete status");
+    }
+  };
 
   if (isExpired) {
     return (
@@ -124,6 +211,44 @@ export function StatusCard({ status, index }: StatusCardProps) {
             <span className="text-base text-[rgb(var(--muted-foreground))]">
               {formatTimestamp(status.createdAt)}
             </span>
+            {canModerate && (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="p-1.5 rounded-full hover:bg-[rgba(var(--primary),0.1)] transition-colors"
+                  aria-label="Moderation options"
+                >
+                  <MoreVertical size={16} className="text-[rgb(var(--muted-foreground))]" />
+                </button>
+                {showDropdown && (
+                  <div
+                    className="absolute right-0 mt-2 w-48 rounded-lg border shadow-lg z-10"
+                    style={{
+                      background: "rgb(var(--card))",
+                      borderColor: "rgb(var(--border))",
+                    }}
+                  >
+                    {isAdmin && status.emojiBlobCid && (
+                      <button
+                        onClick={handleBlacklistEmoji}
+                        className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-[rgba(var(--primary),0.1)] transition-colors first:rounded-t-lg"
+                      >
+                        <ShieldAlert size={14} />
+                        <span>Blacklist emoji</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={handleDeleteStatus}
+                      className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-[rgba(var(--destructive),0.1)] transition-colors last:rounded-b-lg"
+                      style={{ color: "rgb(var(--destructive))" }}
+                    >
+                      <Trash2 size={14} />
+                      <span>Delete status</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* status content */}

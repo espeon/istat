@@ -82,6 +82,14 @@
           "type": "string",
           "description": "Alt text for the emoji"
         },
+        "emojiBlobCid": {
+          "type": "string",
+          "description": "The blob CID of the emoji image (for moderation)"
+        },
+        "emojiRef": {
+          "type": "string",
+          "description": "The AT-URI reference to the emoji (for moderation)"
+        },
         "title": {
           "type": "string",
           "description": "Optional status text title",

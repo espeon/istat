@@ -12,6 +12,8 @@ interface StatusFeedProps {
     description?: string;
     expires?: string;
     createdAt: string;
+    emojiBlobCid?: string;
+    emojiRef?: string;
   }>;
   loading: boolean;
   error: string | null;
@@ -65,6 +67,7 @@ export function StatusFeed({ statuses, loading, error, onRetry }: StatusFeedProp
           key={`${status.did}-${status.rkey}`}
           status={status}
           index={index}
+          onModerated={onRetry}
         />
       ))}
     </div>

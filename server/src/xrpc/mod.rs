@@ -603,6 +603,8 @@ pub async fn handle_list_statuses(
                     .emoji_url(emoji_url)
                     .maybe_emoji_name(emoji_name.map(Into::into))
                     .maybe_emoji_alt(alt_text.map(Into::into))
+                    .maybe_emoji_blob_cid(emoji_blob_cid.map(Into::into))
+                    .maybe_emoji_ref(Some(emoji_ref))
                     .maybe_title(title.map(Into::into))
                     .maybe_description(description.map(Into::into))
                     .maybe_expires(
