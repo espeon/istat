@@ -20,7 +20,14 @@ async fn extract_authenticated_did(
         .and_then(|h| h.to_str().ok())
         .ok_or(StatusCode::UNAUTHORIZED)?;
 
-    let token = extract_bearer_token(auth_header).ok_or(StatusCode::UNAUTHORIZED)?;
+    // Support both "Bearer" and "DPoP" authorization schemes
+    let token = extract_bearer_token(auth_header)
+        .or_else(|| {
+            auth_header
+                .strip_prefix("DPoP ")
+                .or_else(|| auth_header.strip_prefix("dpop "))
+        })
+        .ok_or(StatusCode::UNAUTHORIZED)?;
 
     // Get expected issuer from environment or use default
     let issuer = env::var("OAUTH_ISSUER").unwrap_or_else(|_| "http://localhost:3001".to_string());
