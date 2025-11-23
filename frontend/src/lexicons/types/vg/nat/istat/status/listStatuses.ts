@@ -77,9 +77,17 @@ const _statusViewSchema = /*#__PURE__*/ v.object({
    */
   emojiAlt: /*#__PURE__*/ v.optional(/*#__PURE__*/ v.string()),
   /**
+   * The blob CID of the emoji image (for moderation)
+   */
+  emojiBlobCid: /*#__PURE__*/ v.optional(/*#__PURE__*/ v.string()),
+  /**
    * Canonical name/identifier for the emoji (no spaces, e.g. 'POGGERS', 'Cinema')
    */
   emojiName: /*#__PURE__*/ v.optional(/*#__PURE__*/ v.string()),
+  /**
+   * The AT-URI reference to the emoji (for moderation)
+   */
+  emojiRef: /*#__PURE__*/ v.optional(/*#__PURE__*/ v.string()),
   /**
    * URL to the emoji
    */

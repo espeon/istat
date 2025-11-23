@@ -19,7 +19,7 @@ use lexicons::vg_nat::istat::{
 use miette::{IntoDiagnostic, Result};
 use serde::Serialize;
 use sqlx::{Row, sqlite::SqlitePool};
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 use tower::ServiceExt;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
@@ -32,6 +32,7 @@ mod xrpc;
 struct AppState {
     db: SqlitePool,
     public_url: String,
+    key_store: Arc<oatproxy::SqliteStore>,
 }
 
 #[derive(Serialize)]
@@ -237,6 +238,7 @@ async fn main() -> Result<()> {
     let state = AppState {
         db: pool,
         public_url: public_url.clone(),
+        key_store: oatproxy_store.clone(),
     };
 
     let xrpc_router = Router::new()
@@ -252,6 +254,35 @@ async fn main() -> Result<()> {
             xrpc::handle_list_user_statuses,
         ))
         .merge(ListStatusesRequest::into_router(xrpc::handle_list_statuses))
+        // Moderation endpoints
+        .route(
+            "/xrpc/vg.nat.istat.moderation.blacklistCid",
+            axum::routing::post(xrpc::moderation::handle_blacklist_cid),
+        )
+        .route(
+            "/xrpc/vg.nat.istat.moderation.removeBlacklist",
+            axum::routing::post(xrpc::moderation::handle_remove_blacklist),
+        )
+        .route(
+            "/xrpc/vg.nat.istat.moderation.listBlacklisted",
+            axum::routing::get(xrpc::moderation::handle_list_blacklisted),
+        )
+        .route(
+            "/xrpc/vg.nat.istat.moderation.listAuditLog",
+            axum::routing::get(xrpc::moderation::handle_list_audit_log),
+        )
+        .route(
+            "/xrpc/vg.nat.istat.moderation.isAdmin",
+            axum::routing::get(xrpc::moderation::handle_is_admin),
+        )
+        .route(
+            "/xrpc/vg.nat.istat.moji.deleteEmoji",
+            axum::routing::post(xrpc::moderation::handle_delete_emoji),
+        )
+        .route(
+            "/xrpc/vg.nat.istat.status.deleteStatus",
+            axum::routing::post(xrpc::moderation::handle_delete_status),
+        )
         .with_state(state.clone());
 
     let dev_mode = std::env::var("DEV_MODE").unwrap_or_default() == "true";

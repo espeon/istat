@@ -4,5 +4,6 @@
 // Any manual changes will be overwritten on the next regeneration.
 
 pub mod actor;
+pub mod moderation;
 pub mod moji;
 pub mod status;

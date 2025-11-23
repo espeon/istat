@@ -1,0 +1,60 @@
+{
+  "lexicon": 1,
+  "id": "vg.nat.istat.moderation.blacklistCid",
+  "defs": {
+    "main": {
+      "type": "procedure",
+      "description": "Blacklist a CID from being displayed (admin only)",
+      "input": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["cid", "reason", "contentType"],
+          "properties": {
+            "cid": {
+              "type": "string",
+              "description": "The CID to blacklist"
+            },
+            "reason": {
+              "type": "string",
+              "enum": ["nudity", "gore", "harassment", "spam", "copyright", "other"],
+              "description": "Predefined reason for blacklisting"
+            },
+            "reasonDetails": {
+              "type": "string",
+              "maxLength": 1000,
+              "description": "Additional details explaining the blacklist reason"
+            },
+            "contentType": {
+              "type": "string",
+              "enum": ["emoji_blob", "avatar", "banner"],
+              "description": "Type of content being blacklisted"
+            }
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["success"],
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "name": "Unauthorized",
+          "description": "User is not an admin"
+        },
+        {
+          "name": "AlreadyBlacklisted",
+          "description": "This CID is already blacklisted"
+        }
+      ]
+    }
+  }
+}

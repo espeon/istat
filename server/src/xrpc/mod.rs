@@ -18,6 +18,8 @@ use std::{collections::BTreeMap, str::FromStr};
 
 use crate::AppState;
 
+pub mod moderation;
+
 pub async fn handle_resolve(
     ExtractXrpc(req): ExtractXrpc<ResolveHandleRequest>,
 ) -> Result<Json<ResolveHandleOutput<'static>>, StatusCode> {
@@ -77,10 +79,13 @@ pub async fn handle_get_status(
     let row = sqlx::query(
         r#"
         SELECT s.at, s.emoji_ref, s.emoji_ref_cid, s.title, s.description, s.expires, s.created_at,
-               e.mime_type
+               e.mime_type, e.blob_cid
         FROM statuses s
         LEFT JOIN emojis e ON s.emoji_ref = 'at://' || e.at
         WHERE s.at = ?
+          AND s.deleted_at IS NULL
+          AND (e.deleted_at IS NULL OR e.at IS NULL)
+          AND (e.blob_cid NOT IN (SELECT cid FROM blacklisted_cids WHERE content_type = 'emoji_blob') OR e.blob_cid IS NULL)
         "#,
     )
     .bind(&at_uri)
@@ -230,8 +235,10 @@ pub async fn handle_search_emoji(
                p.handle
         FROM emojis e
         LEFT JOIN profiles p ON e.did = p.did
-        WHERE e.emoji_name LIKE ? COLLATE NOCASE
-           OR e.alt_text LIKE ? COLLATE NOCASE
+        WHERE (e.emoji_name LIKE ? COLLATE NOCASE
+           OR e.alt_text LIKE ? COLLATE NOCASE)
+          AND e.deleted_at IS NULL
+          AND e.blob_cid NOT IN (SELECT cid FROM blacklisted_cids WHERE content_type = 'emoji_blob')
         ORDER BY e.created_at DESC
         LIMIT ?
         "#,
@@ -337,6 +344,9 @@ pub async fn handle_list_user_statuses(
         LEFT JOIN profiles p ON s.did = p.did
         LEFT JOIN emojis e ON s.emoji_ref = 'at://' || e.at
         WHERE s.did = ?
+          AND s.deleted_at IS NULL
+          AND (e.deleted_at IS NULL OR e.at IS NULL)
+          AND (e.blob_cid NOT IN (SELECT cid FROM blacklisted_cids WHERE content_type = 'emoji_blob') OR e.blob_cid IS NULL)
           AND (s.expires IS NULL OR datetime(s.expires) > datetime('now'))
         ORDER BY s.created_at DESC
         LIMIT ?
@@ -477,7 +487,10 @@ pub async fn handle_list_statuses(
         FROM statuses s
         LEFT JOIN profiles p ON s.did = p.did
         LEFT JOIN emojis e ON s.emoji_ref = 'at://' || e.at
-        WHERE (s.expires IS NULL OR datetime(s.expires) > datetime('now'))
+        WHERE s.deleted_at IS NULL
+          AND (e.deleted_at IS NULL OR e.at IS NULL)
+          AND (e.blob_cid NOT IN (SELECT cid FROM blacklisted_cids WHERE content_type = 'emoji_blob') OR e.blob_cid IS NULL)
+          AND (s.expires IS NULL OR datetime(s.expires) > datetime('now'))
         ORDER BY s.created_at DESC
         LIMIT ?
         "#,
@@ -531,7 +544,7 @@ pub async fn handle_list_statuses(
 
             // If we have the emoji blob CID from our DB, use it
             // Otherwise try to extract from the emoji_ref AT-URI
-            let emoji_url = if let Some(blob_cid) = emoji_blob_cid {
+            let emoji_url = if let Some(ref blob_cid) = emoji_blob_cid {
                 if let Some(emoji_owner_did) = emoji_did {
                     format!(
                         "https://at.uwu.wang/{}/{}@{}",
@@ -590,6 +603,8 @@ pub async fn handle_list_statuses(
                     .emoji_url(emoji_url)
                     .maybe_emoji_name(emoji_name.map(Into::into))
                     .maybe_emoji_alt(alt_text.map(Into::into))
+                    .maybe_emoji_blob_cid(emoji_blob_cid.map(Into::into))
+                    .maybe_emoji_ref(Some(emoji_ref.into()))
                     .maybe_title(title.map(Into::into))
                     .maybe_description(description.map(Into::into))
                     .maybe_expires(

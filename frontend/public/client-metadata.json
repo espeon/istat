@@ -1,6 +1,6 @@
 {
   "client_id": "https://creator-elementary-fate-fair.trycloudflare.com/client-metadata.json",
-  "client_name": "iStat Web Client",
+  "client_name": "nyt",
   "client_uri": "https://creator-elementary-fate-fair.trycloudflare.com",
   "redirect_uris": [
     "https://creator-elementary-fate-fair.trycloudflare.com/oauth/callback"
