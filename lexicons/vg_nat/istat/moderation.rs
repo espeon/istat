@@ -5,5 +5,6 @@
 
 pub mod blacklist_cid;
 pub mod is_admin;
+pub mod list_audit_log;
 pub mod list_blacklisted;
 pub mod remove_blacklist;

@@ -19,7 +19,7 @@ use lexicons::vg_nat::istat::{
 use miette::{IntoDiagnostic, Result};
 use serde::Serialize;
 use sqlx::{Row, sqlite::SqlitePool};
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 use tower::ServiceExt;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
@@ -32,7 +32,7 @@ mod xrpc;
 struct AppState {
     db: SqlitePool,
     public_url: String,
-    key_store: oatproxy::SqliteStore,
+    key_store: Arc<oatproxy::SqliteStore>,
 }
 
 #[derive(Serialize)]

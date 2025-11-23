@@ -192,10 +192,18 @@ pub struct StatusView<'a> {
     #[serde(skip_serializing_if = "std::option::Option::is_none")]
     #[serde(borrow)]
     pub emoji_alt: Option<jacquard_common::CowStr<'a>>,
+    /// The blob CID of the emoji image (for moderation)
+    #[serde(skip_serializing_if = "std::option::Option::is_none")]
+    #[serde(borrow)]
+    pub emoji_blob_cid: Option<jacquard_common::CowStr<'a>>,
     /// Canonical name/identifier for the emoji (no spaces, e.g. 'POGGERS', 'Cinema')
     #[serde(skip_serializing_if = "std::option::Option::is_none")]
     #[serde(borrow)]
     pub emoji_name: Option<jacquard_common::CowStr<'a>>,
+    /// The AT-URI reference to the emoji (for moderation)
+    #[serde(skip_serializing_if = "std::option::Option::is_none")]
+    #[serde(borrow)]
+    pub emoji_ref: Option<jacquard_common::CowStr<'a>>,
     /// URL to the emoji
     #[serde(borrow)]
     pub emoji_url: jacquard_common::CowStr<'a>,
@@ -318,6 +326,8 @@ pub struct StatusViewBuilder<'a, S: status_view_state::State> {
         ::core::option::Option<jacquard_common::CowStr<'a>>,
         ::core::option::Option<jacquard_common::CowStr<'a>>,
         ::core::option::Option<jacquard_common::CowStr<'a>>,
+        ::core::option::Option<jacquard_common::CowStr<'a>>,
+        ::core::option::Option<jacquard_common::CowStr<'a>>,
         ::core::option::Option<jacquard_common::types::string::Datetime>,
         ::core::option::Option<jacquard_common::types::string::Handle<'a>>,
         ::core::option::Option<jacquard_common::CowStr<'a>>,
@@ -339,6 +349,8 @@ impl<'a> StatusViewBuilder<'a, status_view_state::Empty> {
         StatusViewBuilder {
             _phantom_state: ::core::marker::PhantomData,
             __unsafe_private_named: (
+                None,
+                None,
                 None,
                 None,
                 None,
@@ -472,12 +484,31 @@ impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
 }
 
 impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
+    /// Set the `emojiBlobCid` field (optional)
+    pub fn emoji_blob_cid(
+        mut self,
+        value: impl Into<Option<jacquard_common::CowStr<'a>>>,
+    ) -> Self {
+        self.__unsafe_private_named.6 = value.into();
+        self
+    }
+    /// Set the `emojiBlobCid` field to an Option value (optional)
+    pub fn maybe_emoji_blob_cid(
+        mut self,
+        value: Option<jacquard_common::CowStr<'a>>,
+    ) -> Self {
+        self.__unsafe_private_named.6 = value;
+        self
+    }
+}
+
+impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
     /// Set the `emojiName` field (optional)
     pub fn emoji_name(
         mut self,
         value: impl Into<Option<jacquard_common::CowStr<'a>>>,
     ) -> Self {
-        self.__unsafe_private_named.6 = value.into();
+        self.__unsafe_private_named.7 = value.into();
         self
     }
     /// Set the `emojiName` field to an Option value (optional)
@@ -485,7 +516,26 @@ impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
         mut self,
         value: Option<jacquard_common::CowStr<'a>>,
     ) -> Self {
-        self.__unsafe_private_named.6 = value;
+        self.__unsafe_private_named.7 = value;
+        self
+    }
+}
+
+impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
+    /// Set the `emojiRef` field (optional)
+    pub fn emoji_ref(
+        mut self,
+        value: impl Into<Option<jacquard_common::CowStr<'a>>>,
+    ) -> Self {
+        self.__unsafe_private_named.8 = value.into();
+        self
+    }
+    /// Set the `emojiRef` field to an Option value (optional)
+    pub fn maybe_emoji_ref(
+        mut self,
+        value: Option<jacquard_common::CowStr<'a>>,
+    ) -> Self {
+        self.__unsafe_private_named.8 = value;
         self
     }
 }
@@ -500,7 +550,7 @@ where
         mut self,
         value: impl Into<jacquard_common::CowStr<'a>>,
     ) -> StatusViewBuilder<'a, status_view_state::SetEmojiUrl<S>> {
-        self.__unsafe_private_named.7 = ::core::option::Option::Some(value.into());
+        self.__unsafe_private_named.9 = ::core::option::Option::Some(value.into());
         StatusViewBuilder {
             _phantom_state: ::core::marker::PhantomData,
             __unsafe_private_named: self.__unsafe_private_named,
@@ -515,7 +565,7 @@ impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
         mut self,
         value: impl Into<Option<jacquard_common::types::string::Datetime>>,
     ) -> Self {
-        self.__unsafe_private_named.8 = value.into();
+        self.__unsafe_private_named.10 = value.into();
         self
     }
     /// Set the `expires` field to an Option value (optional)
@@ -523,7 +573,7 @@ impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
         mut self,
         value: Option<jacquard_common::types::string::Datetime>,
     ) -> Self {
-        self.__unsafe_private_named.8 = value;
+        self.__unsafe_private_named.10 = value;
         self
     }
 }
@@ -538,7 +588,7 @@ where
         mut self,
         value: impl Into<jacquard_common::types::string::Handle<'a>>,
     ) -> StatusViewBuilder<'a, status_view_state::SetHandle<S>> {
-        self.__unsafe_private_named.9 = ::core::option::Option::Some(value.into());
+        self.__unsafe_private_named.11 = ::core::option::Option::Some(value.into());
         StatusViewBuilder {
             _phantom_state: ::core::marker::PhantomData,
             __unsafe_private_named: self.__unsafe_private_named,
@@ -557,7 +607,7 @@ where
         mut self,
         value: impl Into<jacquard_common::CowStr<'a>>,
     ) -> StatusViewBuilder<'a, status_view_state::SetRkey<S>> {
-        self.__unsafe_private_named.10 = ::core::option::Option::Some(value.into());
+        self.__unsafe_private_named.12 = ::core::option::Option::Some(value.into());
         StatusViewBuilder {
             _phantom_state: ::core::marker::PhantomData,
             __unsafe_private_named: self.__unsafe_private_named,
@@ -572,12 +622,12 @@ impl<'a, S: status_view_state::State> StatusViewBuilder<'a, S> {
         mut self,
         value: impl Into<Option<jacquard_common::CowStr<'a>>>,
     ) -> Self {
-        self.__unsafe_private_named.11 = value.into();
+        self.__unsafe_private_named.13 = value.into();
         self
     }
     /// Set the `title` field to an Option value (optional)
     pub fn maybe_title(mut self, value: Option<jacquard_common::CowStr<'a>>) -> Self {
-        self.__unsafe_private_named.11 = value;
+        self.__unsafe_private_named.13 = value;
         self
     }
 }
@@ -600,12 +650,14 @@ where
             did: self.__unsafe_private_named.3.unwrap(),
             display_name: self.__unsafe_private_named.4,
             emoji_alt: self.__unsafe_private_named.5,
-            emoji_name: self.__unsafe_private_named.6,
-            emoji_url: self.__unsafe_private_named.7.unwrap(),
-            expires: self.__unsafe_private_named.8,
-            handle: self.__unsafe_private_named.9.unwrap(),
-            rkey: self.__unsafe_private_named.10.unwrap(),
-            title: self.__unsafe_private_named.11,
+            emoji_blob_cid: self.__unsafe_private_named.6,
+            emoji_name: self.__unsafe_private_named.7,
+            emoji_ref: self.__unsafe_private_named.8,
+            emoji_url: self.__unsafe_private_named.9.unwrap(),
+            expires: self.__unsafe_private_named.10,
+            handle: self.__unsafe_private_named.11.unwrap(),
+            rkey: self.__unsafe_private_named.12.unwrap(),
+            title: self.__unsafe_private_named.13,
             extra_data: Default::default(),
         }
     }
@@ -624,12 +676,14 @@ where
             did: self.__unsafe_private_named.3.unwrap(),
             display_name: self.__unsafe_private_named.4,
             emoji_alt: self.__unsafe_private_named.5,
-            emoji_name: self.__unsafe_private_named.6,
-            emoji_url: self.__unsafe_private_named.7.unwrap(),
-            expires: self.__unsafe_private_named.8,
-            handle: self.__unsafe_private_named.9.unwrap(),
-            rkey: self.__unsafe_private_named.10.unwrap(),
-            title: self.__unsafe_private_named.11,
+            emoji_blob_cid: self.__unsafe_private_named.6,
+            emoji_name: self.__unsafe_private_named.7,
+            emoji_ref: self.__unsafe_private_named.8,
+            emoji_url: self.__unsafe_private_named.9.unwrap(),
+            expires: self.__unsafe_private_named.10,
+            handle: self.__unsafe_private_named.11.unwrap(),
+            rkey: self.__unsafe_private_named.12.unwrap(),
+            title: self.__unsafe_private_named.13,
             extra_data: Some(extra_data),
         }
     }
@@ -835,12 +889,52 @@ fn lexicon_doc_vg_nat_istat_status_listStatuses() -> ::jacquard_lexicon::lexicon
                         );
                         map.insert(
                             ::jacquard_common::smol_str::SmolStr::new_static(
+                                "emojiBlobCid",
+                            ),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static(
+                                        "The blob CID of the emoji image (for moderation)",
+                                    ),
+                                ),
+                                format: None,
+                                default: None,
+                                min_length: None,
+                                max_length: None,
+                                min_graphemes: None,
+                                max_graphemes: None,
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static(
                                 "emojiName",
                             ),
                             ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
                                 description: Some(
                                     ::jacquard_common::CowStr::new_static(
                                         "Canonical name/identifier for the emoji (no spaces, e.g. 'POGGERS', 'Cinema')",
+                                    ),
+                                ),
+                                format: None,
+                                default: None,
+                                min_length: None,
+                                max_length: None,
+                                min_graphemes: None,
+                                max_graphemes: None,
+                                r#enum: None,
+                                r#const: None,
+                                known_values: None,
+                            }),
+                        );
+                        map.insert(
+                            ::jacquard_common::smol_str::SmolStr::new_static("emojiRef"),
+                            ::jacquard_lexicon::lexicon::LexObjectProperty::String(::jacquard_lexicon::lexicon::LexString {
+                                description: Some(
+                                    ::jacquard_common::CowStr::new_static(
+                                        "The AT-URI reference to the emoji (for moderation)",
                                     ),
                                 ),
                                 format: None,

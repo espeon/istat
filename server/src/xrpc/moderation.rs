@@ -1,12 +1,12 @@
 use axum::{
-    extract::{Request, State},
-    http::{HeaderMap, StatusCode},
     Json,
+    extract::State,
+    http::{HeaderMap, StatusCode},
 };
 use jacquard_oatproxy::auth::{extract_bearer_token, validate_proxy_jwt};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
-use std::env;
+use std::{env, str::FromStr};
 
 use crate::AppState;
 
@@ -20,14 +20,15 @@ async fn extract_authenticated_did(
         .and_then(|h| h.to_str().ok())
         .ok_or(StatusCode::UNAUTHORIZED)?;
 
-    let token =
-        extract_bearer_token(auth_header).ok_or(StatusCode::UNAUTHORIZED)?;
+    let token = extract_bearer_token(auth_header).ok_or(StatusCode::UNAUTHORIZED)?;
 
     // Get expected issuer from environment or use default
-    let issuer = env::var("OAUTH_ISSUER")
-        .unwrap_or_else(|_| "http://localhost:3001".to_string());
+    let issuer = env::var("OAUTH_ISSUER").unwrap_or_else(|_| "http://localhost:3001".to_string());
 
-    let claims = validate_proxy_jwt(token, &state.key_store, &issuer)
+    // Arc<SqliteStore> does not implement KeyStore, so pass a reference to the inner store
+    let key_store_ref = state.key_store.as_ref();
+
+    let claims = validate_proxy_jwt(token, key_store_ref, &issuer)
         .await
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
 
@@ -47,12 +48,14 @@ async fn is_admin(did: &str, state: &AppState) -> Result<bool, StatusCode> {
 
         if admin_dids.contains(&did) {
             // Ensure this DID is in the admins table
-            sqlx::query("INSERT OR IGNORE INTO admins (did, granted_by, notes) VALUES (?, NULL, ?)")
-                .bind(did)
-                .bind("Initial admin from environment variable")
-                .execute(&state.db)
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            sqlx::query(
+                "INSERT OR IGNORE INTO admins (did, granted_by, notes) VALUES (?, NULL, ?)",
+            )
+            .bind(did)
+            .bind("Initial admin from environment variable")
+            .execute(&state.db)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             return Ok(true);
         }
     }
@@ -253,13 +256,12 @@ pub async fn handle_remove_blacklist(
     let moderator_did = require_admin(&headers, &state).await?;
 
     // Get the content_type before deleting so we can log it
-    let content_type: Option<String> = sqlx::query_scalar(
-        "SELECT content_type FROM blacklisted_cids WHERE cid = ?"
-    )
-    .bind(&req.cid)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let content_type: Option<String> =
+        sqlx::query_scalar("SELECT content_type FROM blacklisted_cids WHERE cid = ?")
+            .bind(&req.cid)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let content_type = content_type.ok_or(StatusCode::NOT_FOUND)?;
 
@@ -343,7 +345,12 @@ pub async fn handle_delete_emoji(
 
     // Parse AT-URI to get DID and rkey
     // Format: at://did:plc:xyz/vg.nat.istat.moji.emoji/rkey
-    let uri_parts: Vec<&str> = req.uri.strip_prefix("at://").unwrap_or(&req.uri).split('/').collect();
+    let uri_parts: Vec<&str> = req
+        .uri
+        .strip_prefix("at://")
+        .unwrap_or(&req.uri)
+        .split('/')
+        .collect();
     if uri_parts.len() < 3 {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -373,16 +380,7 @@ pub async fn handle_delete_emoji(
     }
 
     // Log audit action
-    log_audit_action(
-        &state,
-        &did,
-        "delete_emoji",
-        "emoji",
-        &req.uri,
-        None,
-        None,
-    )
-    .await?;
+    log_audit_action(&state, &did, "delete_emoji", "emoji", &req.uri, None, None).await?;
 
     Ok(Json(DeleteEmojiResponse { success: true }))
 }
@@ -397,7 +395,12 @@ pub async fn handle_delete_status(
 
     // Parse AT-URI to get DID and rkey
     // Format: at://did:plc:xyz/vg.nat.istat.status.record/rkey
-    let uri_parts: Vec<&str> = req.uri.strip_prefix("at://").unwrap_or(&req.uri).split('/').collect();
+    let uri_parts: Vec<&str> = req
+        .uri
+        .strip_prefix("at://")
+        .unwrap_or(&req.uri)
+        .split('/')
+        .collect();
     if uri_parts.len() < 3 {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -451,11 +454,11 @@ pub async fn handle_list_audit_log(
 
     let rows = sqlx::query(
         r#"
-        SELECT 
-            l.id, 
-            l.moderator_did, 
-            l.action, 
-            l.target_type, 
+        SELECT
+            l.id,
+            l.moderator_did,
+            l.action,
+            l.target_type,
             l.target_id,
             l.reason,
             l.reason_details,
@@ -490,7 +493,9 @@ pub async fn handle_list_audit_log(
                 AuditLogEntry::new()
                     .id(id)
                     .moderator_did(Did::from_str(&moderator_did).ok()?)
-                    .maybe_moderator_handle(moderator_handle.and_then(|h| Handle::from_str(&h).ok()))
+                    .maybe_moderator_handle(
+                        moderator_handle.and_then(|h| Handle::from_str(&h).ok()),
+                    )
                     .action(action)
                     .target_type(target_type)
                     .target_id(target_id)
@@ -510,4 +515,3 @@ pub async fn handle_list_audit_log(
 
     Ok(Json(output))
 }
-

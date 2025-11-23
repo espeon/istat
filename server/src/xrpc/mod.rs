@@ -544,7 +544,7 @@ pub async fn handle_list_statuses(
 
             // If we have the emoji blob CID from our DB, use it
             // Otherwise try to extract from the emoji_ref AT-URI
-            let emoji_url = if let Some(blob_cid) = emoji_blob_cid {
+            let emoji_url = if let Some(ref blob_cid) = emoji_blob_cid {
                 if let Some(emoji_owner_did) = emoji_did {
                     format!(
                         "https://at.uwu.wang/{}/{}@{}",
@@ -604,7 +604,7 @@ pub async fn handle_list_statuses(
                     .maybe_emoji_name(emoji_name.map(Into::into))
                     .maybe_emoji_alt(alt_text.map(Into::into))
                     .maybe_emoji_blob_cid(emoji_blob_cid.map(Into::into))
-                    .maybe_emoji_ref(Some(emoji_ref))
+                    .maybe_emoji_ref(Some(emoji_ref.into()))
                     .maybe_title(title.map(Into::into))
                     .maybe_description(description.map(Into::into))
                     .maybe_expires(
