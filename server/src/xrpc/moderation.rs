@@ -329,7 +329,17 @@ pub async fn handle_is_admin(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<IsAdminResponse>, StatusCode> {
-    let did = extract_authenticated_did(&headers, &state).await?;
+    // Try to extract DID, but if authentication fails, return false instead of 401
+    // This allows unauthenticated or invalid token requests to get a meaningful response
+    let did = match extract_authenticated_did(&headers, &state).await {
+        Ok(did) => did,
+        Err(e) => {
+            // Not authenticated or invalid token -> not an admin
+            eprintln!("Failed to extract DID from auth token (status: {:?})", e);
+            return Ok(Json(IsAdminResponse { is_admin: false }));
+        }
+    };
+
     let admin = is_admin(&did, &state).await?;
 
     Ok(Json(IsAdminResponse { is_admin: admin }))
