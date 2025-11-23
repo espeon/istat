@@ -38,7 +38,9 @@ export function Header({ isScrolled }: HeaderProps) {
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
                 fontWeight: 500,
-                filter: "drop-shadow(0 2px 8px rgba(var(--primary), 0.3))",
+                filter: "drop-shadow(0 2px 12px rgba(var(--primary), 0.5)) drop-shadow(0 0 20px rgba(var(--primary), 0.3))",
+                lineHeight: 1.3,
+                paddingBottom: "0.1em",
               }}
             >
               nyt
