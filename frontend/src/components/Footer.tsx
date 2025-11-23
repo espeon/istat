@@ -6,7 +6,7 @@ export function Footer() {
       <div className="max-w-4xl mx-auto px-8 py-16 relative">
         <div className="flex flex-col items-center gap-6 text-center">
           <div
-            className="font-cursive text-3xl"
+            className="font-cursive text-3xl px-1 py-2"
             style={{
               background: `linear-gradient(135deg, rgb(var(--primary)) 0%, rgb(var(--accent)) 100%)`,
               WebkitBackgroundClip: "text",

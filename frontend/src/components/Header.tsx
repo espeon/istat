@@ -22,14 +22,16 @@ export function Header({ isScrolled }: HeaderProps) {
           : "rgba(var(--background), 0.3)",
         backdropFilter: "blur(20px)",
         borderBottom: "1px solid rgba(var(--border), 0.2)",
-        boxShadow: isScrolled ? "0 4px 20px rgba(var(--primary), 0.08)" : "none",
+        boxShadow: isScrolled
+          ? "0 4px 20px rgba(var(--primary), 0.08)"
+          : "none",
       }}
     >
       <div className="max-w-4xl mx-auto px-8 relative flex-1">
         <div className="flex items-center justify-center">
           <Link to="/" className="group">
             <h1
-              className={`font-cursive transition-all duration-500 ${
+              className={`font-cursive transition-all overflow-visible px-2 pb-1 duration-500 ${
                 isScrolled ? "text-2xl" : "text-3xl"
               }`}
               style={{
@@ -38,9 +40,9 @@ export function Header({ isScrolled }: HeaderProps) {
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
                 fontWeight: 500,
-                filter: "drop-shadow(0 2px 12px rgba(var(--primary), 0.5)) drop-shadow(0 0 20px rgba(var(--primary), 0.3))",
-                lineHeight: 1.3,
-                paddingBottom: "0.1em",
+                filter:
+                  "drop-shadow(0 2px 12px rgba(var(--primary), 0.5)) drop-shadow(0 0 20px rgba(var(--primary), 0.3))",
+                lineHeight: 1.5,
               }}
             >
               nyt
