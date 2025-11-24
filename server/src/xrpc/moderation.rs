@@ -3,7 +3,7 @@ use axum::{
     extract::State,
     http::{HeaderMap, StatusCode},
 };
-use jacquard_oatproxy::auth::{extract_bearer_token, validate_proxy_jwt};
+use jacquard_oatproxy::auth::extract_bearer_token;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::{env, str::FromStr};
@@ -29,15 +29,15 @@ async fn extract_authenticated_did(
         })
         .ok_or(StatusCode::UNAUTHORIZED)?;
 
-    // Get expected issuer from environment or use default
-    let issuer = env::var("OAUTH_ISSUER").unwrap_or_else(|_| "http://localhost:3001".to_string());
-
-    // Arc<SqliteStore> does not implement KeyStore, so pass a reference to the inner store
+    // Validate the downstream JWT using TokenManager
     let key_store_ref = state.key_store.as_ref();
-
-    let claims = validate_proxy_jwt(token, key_store_ref, &issuer)
+    let claims = state.token_manager
+        .validate_downstream_jwt(token, key_store_ref)
         .await
-        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+        .map_err(|e| {
+            eprintln!("Failed to validate downstream JWT: {:?}", e);
+            StatusCode::UNAUTHORIZED
+        })?;
 
     Ok(claims.sub)
 }

@@ -48,6 +48,7 @@ pub use error::{Error, Result};
 pub use server::{OAuthProxyServer, OAuthProxyServerBuilder};
 pub use session::{OAuthSession, SessionState};
 pub use store::{KeyStore, OAuthSessionStore};
+pub use token::{DownstreamTokenClaims, TokenManager};
 
 #[cfg(feature = "axum")]
 pub use auth::axum_extractors::{AuthState, AuthenticatedClaims, AuthenticatedUser};

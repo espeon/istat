@@ -49,7 +49,7 @@ export function QtProvider({ children }: { children: React.ReactNode }) {
           await logout();
         }
       },
-      60 * 60 * 1000, // every hour
+      45 * 60 * 1000, // every 45 minutes (before 1-hour token expiry)
     );
 
     return () => {
@@ -70,7 +70,7 @@ export function QtProvider({ children }: { children: React.ReactNode }) {
           const rpc = new Client({ handler: agent });
 
           // verify session is valid, refresh if needed
-          await currentAgent?.getSession();
+          await agent.getSession();
 
           setCurrentAgent(agent);
           setDid(currentDid);

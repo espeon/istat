@@ -33,6 +33,7 @@ struct AppState {
     db: SqlitePool,
     public_url: String,
     key_store: Arc<oatproxy::SqliteStore>,
+    token_manager: Arc<jacquard_oatproxy::TokenManager>,
 }
 
 #[derive(Serialize)]
@@ -235,10 +236,13 @@ async fn main() -> Result<()> {
         .build()
         .into_diagnostic()?;
 
+    let token_manager = Arc::new(jacquard_oatproxy::TokenManager::new(public_url.clone()));
+
     let state = AppState {
         db: pool,
         public_url: public_url.clone(),
         key_store: oatproxy_store.clone(),
+        token_manager,
     };
 
     let xrpc_router = Router::new()
